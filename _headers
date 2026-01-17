@@ -1,8 +1,8 @@
 # Security headers
-X-Frame-Options: DENY
-X-Content-Type-Options: nosniff
-X-XSS-Protection: "1; mode=block"
-Referrer-Policy: strict-origin-when-cross-origin
+/*  X-Frame-Options: DENY
+/*  X-Content-Type-Options: nosniff
+/*  X-XSS-Protection: "1; mode=block"
+/*  Referrer-Policy: strict-origin-when-cross-origin
 
 # Set correct MIME types for JavaScript modules
 /assets/*.js  Content-Type: application/javascript
