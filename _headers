@@ -4,6 +4,10 @@ X-Content-Type-Options: nosniff
 X-XSS-Protection: "1; mode=block"
 Referrer-Policy: strict-origin-when-cross-origin
 
+# Set correct MIME types for JavaScript modules
+/assets/*.js  Content-Type: application/javascript
+/assets/*.css  Content-Type: text/css
+
 # Cache static assets
 /assets/*  Cache-Control: public, max-age=31536000, immutable
 /*.js       Cache-Control: public, max-age=31536000, immutable
