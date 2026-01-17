@@ -9,8 +9,8 @@
     "build:production": "npm run build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "deploy": "wrangler pages deploy",
-    "deploy:preview": "wrangler pages deploy --preview"
+    "deploy": "npm run build",
+    "deploy:wrangler": "wrangler pages deploy"
   },
   "dependencies": {
     "@tiptap/extension-bubble-menu": "^3.15.3",
