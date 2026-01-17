@@ -1,19 +1,19 @@
+# Force correct MIME types for all JavaScript files
+*.js  Content-Type: application/javascript
+/assets/*.js  Content-Type: application/javascript
+
+# Force correct MIME types for CSS files
+*.css  Content-Type: text/css
+/assets/*.css  Content-Type: text/css
+
 # Security headers
 /*  X-Frame-Options: DENY
 /*  X-Content-Type-Options: nosniff
 /*  X-XSS-Protection: "1; mode=block"
 /*  Referrer-Policy: strict-origin-when-cross-origin
 
-# Set correct MIME types for JavaScript modules
-/assets/*.js  Content-Type: application/javascript
-/assets/*.css  Content-Type: text/css
-
-# Cache static assets
-/assets/*  Cache-Control: public, max-age=31536000, immutable
-/*.js       Cache-Control: public, max-age=31536000, immutable
-/*.css      Cache-Control: public, max-age=31536000, immutable
-/*.woff     Cache-Control: public, max-age=31536000, immutable
-/*.woff2    Cache-Control: public, max-age=31536000, immutable
-
-# HTML files should not be cached as aggressively
+# Cache control
+/assets/*  Cache-Control: public, max-age=0, must-revalidate
+/*.js       Cache-Control: public, max-age=0, must-revalidate
+/*.css      Cache-Control: public, max-age=0, must-revalidate
 /*.html     Cache-Control: public, max-age=0, must-revalidate
