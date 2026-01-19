@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { Calendar, User, Clock, ArrowRight } from 'lucide-react';
 import { blogStorageService } from '../lib/blogStorage';
+import { categoryStorageService } from '../lib/blogStorage';
 import type { BlogPost } from '../lib/supabase';
 import Navbar from '../components/public/Navbar';
 import ContentCard from '../components/public/ContentCard';
@@ -14,7 +15,17 @@ const Blog = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
+  const [categoriesData, setCategoriesData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    // Set category from URL parameter
+    const categoryParam = searchParams.get('category');
+    if (categoryParam) {
+      setSelectedCategory(categoryParam);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const loadPosts = async () => {
@@ -29,23 +40,46 @@ const Blog = () => {
       }
     };
 
+    const loadCategories = async () => {
+      try {
+        // Load categories from storage
+        const allCategories = categoryStorageService.getCategories();
+        setCategoriesData(allCategories);
+      } catch (error) {
+        console.error('Error loading categories:', error);
+      }
+    };
+
     loadPosts();
+    loadCategories();
   }, []);
 
   const categories = [
     { value: 'all', label: 'All Posts' },
-    { value: 'personal-story', label: 'Personal Story' },
-    { value: 'lifestyle', label: 'Lifestyle' },
-    { value: 'nutrition', label: 'Nutrition' },
-    { value: 'fitness', label: 'Fitness' },
-    { value: 'tips', label: 'Tips & Advice' }
+    ...categoriesData.map((cat: any) => ({ value: cat.slug, label: cat.name }))
   ];
+
+  const getCategoryName = (categoryId: string): string => {
+    const category = categoriesData.find(cat => cat.id === categoryId);
+    return category ? category.name : categoryId;
+  };
+
+  const getCategoryColors = (categoryId: string): { color: string; bgColor: string } => {
+    const category = categoriesData.find(cat => cat.id === categoryId);
+    return {
+      color: category?.color || 'text-grounded-800',
+      bgColor: category?.bgColor || 'bg-grounded-100'
+    };
+  };
 
   const filteredPosts = blogPosts.filter(post => {
     const matchesSearch = post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       post.excerpt.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'all' ||
-      post.category.toLowerCase().replace(' ', '-') === selectedCategory;
+      post.category === selectedCategory ||
+      post.category === '1' && selectedCategory === 'mindfulness' ||
+      post.category === '2' && selectedCategory === 'fitness' ||
+      post.category === '3' && selectedCategory === 'nutrition';
     return matchesSearch && matchesCategory;
   });
 
@@ -151,7 +185,9 @@ const Blog = () => {
                     description={post.excerpt}
                     href={`/blog/${post.slug}`}
                     variant="blog"
-                    category={post.category}
+                    category={getCategoryName(post.category)}
+                    categoryColor={getCategoryColors(post.category).color}
+                    categoryBgColor={getCategoryColors(post.category).bgColor}
                     date={new Date(post.created_at).toLocaleDateString()}
                     author={post.author}
                     readTime={post.read_time}

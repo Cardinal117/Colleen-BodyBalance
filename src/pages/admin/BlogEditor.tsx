@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Save, ArrowLeft, Eye, Trash2 } from 'lucide-react';
+import { Save, ArrowLeft, Eye, Trash2, Info } from 'lucide-react';
 import BlogEditor from '../../components/admin/BlogEditor';
 import { blogStorageService, categoryStorageService } from '../../lib/blogStorage';
 import type { BlogPost, BlogCategory } from '../../lib/supabase';
@@ -295,6 +295,7 @@ const AdminBlogEditor: React.FC = () => {
               transition={{ delay: 0.2 }}
             >
               <BlogEditor
+                key={slug || 'new'}
                 content={post.content || ''}
                 onChange={handleContentChange}
                 placeholder="Start writing your blog post..."
@@ -360,17 +361,22 @@ const AdminBlogEditor: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Status
                   </label>
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={post.published}
-                      onChange={(e) => setPost(prev => ({ ...prev, published: e.target.checked }))}
-                      className="mr-2"
-                    />
-                    <span className="text-sm text-gray-600">
-                      {post.published ? 'Published' : 'Draft'}
-                    </span>
-                  </div>
+                  <select
+                    value={post.published ? 'published' : 'draft'}
+                    onChange={(e) => setPost(prev => ({ ...prev, published: e.target.value === 'published' }))}
+                    className={`w-full p-2 border rounded focus:ring-grounded-500 focus:border-grounded-500 font-medium ${
+                      post.published 
+                        ? 'bg-green-50 text-green-700 border-green-200' 
+                        : 'bg-gray-50 text-gray-700 border-gray-200'
+                    }`}
+                  >
+                    <option value="draft" className="bg-gray-50 text-gray-700">📝 Draft</option>
+                    <option value="published" className="bg-green-50 text-green-700">🚀 Published</option>
+                    <option value="unpublish" className="bg-red-50 text-red-700">🔴 Unpublish</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {post.published ? 'Post is live and visible to readers' : 'Post is saved but not visible to readers'}
+                  </p>
                 </div>
               </div>
             </motion.div>
@@ -387,6 +393,9 @@ const AdminBlogEditor: React.FC = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Meta Description
+                    <span className="ml-2 text-xs text-gray-500 cursor-help" title="This appears in search engine results and social media previews. Keep it under 160 characters for best results.">
+                      <Info size={12} className="inline" />
+                    </span>
                   </label>
                   <textarea
                     value={post.meta_description}
@@ -399,13 +408,16 @@ const AdminBlogEditor: React.FC = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Meta Keywords
+                    <span className="ml-2 text-xs text-gray-500 cursor-help" title="Comma-separated keywords that help search engines understand your content. Include 5-10 relevant keywords.">
+                      <Info size={12} className="inline" />
+                    </span>
                   </label>
                   <input
                     type="text"
                     value={post.meta_keywords}
                     onChange={(e) => setPost(prev => ({ ...prev, meta_keywords: e.target.value }))}
                     className="w-full p-2 border rounded focus:ring-grounded-500 focus:border-grounded-500"
-                    placeholder="keyword1, keyword2, keyword3"
+                    placeholder="mindfulness, fitness, nutrition, wellness, health"
                   />
                 </div>
               </div>

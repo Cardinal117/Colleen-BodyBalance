@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, ChevronDown, Phone, Mail, Heart, Users, Leaf, Dumbbell, BookOpen } from 'lucide-react';
+import { Menu, X, ChevronDown, Phone, Mail, Heart, BookOpen } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
+import { categoryStorageService } from '../../lib/blogStorage';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isTrainingOpen, setIsTrainingOpen] = useState(false);
   const [isBlogOpen, setIsBlogOpen] = useState(false);
+  const [categories, setCategories] = useState<any[]>([]);
   const location = useLocation();
 
   useEffect(() => {
@@ -16,6 +18,16 @@ const Navbar = () => {
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    // Load categories dynamically from categoryStorageService
+    try {
+      const allCategories = categoryStorageService.getCategories();
+      setCategories(allCategories);
+    } catch (error) {
+      console.error('Error loading categories:', error);
+    }
   }, []);
 
   const isActive = (path: string) => {
@@ -33,68 +45,66 @@ const Navbar = () => {
     { name: 'Virtual Trainer', href: '/virtual-trainer', description: 'Online training programs and virtual coaching' },
   ];
 
-  const blogItems = [
-    { 
-      name: 'Survival is Possible', 
-      href: '/blog/survival-strong-mind-body', 
-      description: 'How positivity helped overcome breast cancer',
+  // Dynamic blog items from storage - show only categories
+  const getBlogItems = () => {
+    if (categories.length === 0) {
+      // Fallback if categories not loaded yet
+      return [
+        {
+          name: 'Mindfulness',
+          href: '/blog?category=mindfulness',
+          description: 'Articles about mindfulness and mental wellness',
+          icon: Heart,
+          category: 'Mindfulness',
+          color: 'text-red-500',
+          bgColor: 'bg-red-50'
+        },
+        {
+          name: 'Fitness',
+          href: '/blog?category=fitness',
+          description: 'Fitness tips and workout advice',
+          icon: Heart,
+          category: 'Fitness',
+          color: 'text-orange-500',
+          bgColor: 'bg-orange-50'
+        },
+        {
+          name: 'Nutrition',
+          href: '/blog?category=nutrition',
+          description: 'Nutrition advice and healthy eating',
+          icon: Heart,
+          category: 'Nutrition',
+          color: 'text-green-500',
+          bgColor: 'bg-green-50'
+        }
+      ];
+    }
+    
+    // Use dynamic categories from storage with their custom colors
+    return categories.map((category: any) => ({
+      name: category.name,
+      href: `/blog?category=${category.slug}`,
+      description: category.description,
       icon: Heart,
-      category: 'Personal Story',
-      color: 'text-red-500',
-      bgColor: 'bg-red-50'
-    },
-    { 
-      name: 'Finding Balance', 
-      href: '/blog/finding-balance-hectic-world', 
-      description: 'Practical tips for work-life balance',
-      icon: Users,
-      category: 'Lifestyle',
-      color: 'text-blue-500',
-      bgColor: 'bg-blue-50'
-    },
-    { 
-      name: 'Plant-Based Nutrition', 
-      href: '/blog/power-plant-based-nutrition', 
-      description: 'Transform your energy with plant-based meals',
-      icon: Leaf,
-      category: 'Nutrition',
-      color: 'text-green-500',
-      bgColor: 'bg-green-50'
-    },
-    { 
-      name: 'Training Tips', 
-      href: '/blog/training-tips', 
-      description: 'Expert advice for effective workouts',
-      icon: Dumbbell,
-      category: 'Fitness',
-      color: 'text-orange-500',
-      bgColor: 'bg-orange-50'
-    },
-    { 
-      name: 'Nutrition Guide', 
-      href: '/blog/nutrition-guide', 
-      description: 'Complete guide to healthy eating',
-      icon: BookOpen,
-      category: 'Health',
-      color: 'text-purple-500',
-      bgColor: 'bg-purple-50'
-    },
-  ];
+      category: category.name,
+      color: category.color || 'text-grounded-500',
+      bgColor: category.bgColor || 'bg-grounded-50'
+    }));
+  };
 
   return (
     <nav className={`fixed w-full z-50 transition-all duration-300 ${
-      scrolled ? 'bg-white shadow-lg py-2' : 'bg-white/95 backdrop-blur-sm py-4'
+      scrolled ? 'bg-white shadow-lg py-2' : 'bg-white/95 backdrop-blur-sm py-3'
     }`}>
       <div className="container">
         <div className="flex justify-between items-center">
           {/* Logo */}
-          <a href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity duration-200">
+          <a href="/" className="flex items-center hover:opacity-80 transition-opacity duration-200">
             <img 
               src="./latestWhiteLogoLarge.jpeg" 
               alt="Body Balance Logo" 
-              className="w-16 h-12 rounded-lg object-cover"
+              className="h-12 rounded-lg object-contain"
             />
-            <span className="font-heading text-2xl font-bold text-gradient">Body Balance</span>
           </a>
 
           {/* Desktop Navigation */}
@@ -184,7 +194,7 @@ const Navbar = () => {
                     onMouseLeave={() => setIsBlogOpen(false)}
                     className="absolute top-full left-0 mt-2 w-96 bg-white rounded-lg shadow-xl border border-neutral-100 overflow-hidden"
                   >
-                    {blogItems.map((item) => (
+                    {getBlogItems().map((item) => (
                       <a
                         key={item.name}
                         href={item.href}
@@ -211,7 +221,7 @@ const Navbar = () => {
                       </a>
                     ))}
                     <a
-                      href="/blog"
+                      href="/blog?category=all"
                       className="block p-4 bg-gradient-to-r from-grounded-50 to-earth-50 hover:from-grounded-100 hover:to-earth-100 transition-all duration-200"
                     >
                       <div className="flex items-center space-x-3">
@@ -219,8 +229,8 @@ const Navbar = () => {
                           <BookOpen className="text-white" size={20} />
                         </div>
                         <div>
-                          <div className="font-medium text-grounded-600">View All Posts</div>
-                          <div className="text-sm text-neutral-600">Browse the complete blog archive</div>
+                          <div className="font-medium text-grounded-600">Browse by Category</div>
+                          <div className="text-sm text-neutral-600">Filter posts by Mindfulness, Fitness, or Nutrition</div>
                         </div>
                       </div>
                     </a>
@@ -336,7 +346,7 @@ const Navbar = () => {
                     : 'text-neutral-900'
                 }`}>Blog Articles</div>
                 <div className="space-y-2">
-                  {blogItems.map((item, index) => (
+                  {getBlogItems().map((item, index) => (
                     <motion.a
                       key={item.name}
                       href={item.href}
@@ -370,7 +380,7 @@ const Navbar = () => {
                     </motion.a>
                   ))}
                   <motion.a
-                    href="/blog"
+                    href="/blog?category=all"
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ 
                       opacity: isOpen ? 1 : 0,
@@ -384,8 +394,8 @@ const Navbar = () => {
                       <BookOpen className="text-white" size={18} />
                     </div>
                     <div>
-                      <div className="font-medium text-sm">View All Posts</div>
-                      <div className="text-xs text-neutral-500">Browse complete blog archive</div>
+                      <div className="font-medium text-sm">Browse by Category</div>
+                      <div className="text-xs text-neutral-500">Filter posts by category</div>
                     </div>
                   </motion.a>
                 </div>

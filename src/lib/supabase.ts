@@ -30,6 +30,8 @@ export interface BlogCategory {
   slug: string;
   description?: string;
   created_at: string;
+  color?: string;
+  bgColor?: string;
 }
 
 // Blog post functions

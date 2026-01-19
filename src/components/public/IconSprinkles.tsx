@@ -97,9 +97,9 @@ const IconSprinkles = ({
 
     // Determine number of icons based on density
     const iconCount = {
-        light: 8,
-        medium: 15,
-        heavy: 25
+        light: 5,
+        medium: 8,
+        heavy: 12
     }[density];
 
     // Generate random positions and sizes for icons
@@ -112,8 +112,8 @@ const IconSprinkles = ({
             const randomX = Math.floor(Math.random() * 90) + 5; // 5-95%
             const randomY = Math.floor(Math.random() * 90) + 5; // 5-95%
             const rotation = Math.floor(Math.random() * 60) - 30; // -30 to 30 degrees
-            const animationDelay = Math.random() * 5;
-            const animationDuration = 8 + Math.random() * 8; // 8-16 seconds
+            const animationDelay = Math.random() * 2;
+            const animationDuration = 4 + Math.random() * 4; // 4-8 seconds
 
             // Random animation type
             const animations = ['float', 'pulse', 'rotate', 'bounce'];

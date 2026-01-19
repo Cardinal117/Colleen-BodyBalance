@@ -3,6 +3,7 @@ import Navbar from '../components/public/Navbar';
 import Footer from '../components/public/Footer';
 import WorkoutBackground from '../components/public/WorkoutBackground';
 import FloatingButtons from '../components/public/FloatingButtons';
+import IconSprinkles from '../components/public/IconSprinkles';
 import { Heart, Award, Users, Target, Star } from 'lucide-react';
 
 const About = () => {
@@ -54,6 +55,7 @@ const About = () => {
       {/* Hero Section */}
       <section className="py-20 bg-gradient-to-br from-grounded-50 via-white to-earth-50 relative overflow-hidden">
         <WorkoutBackground opacity={0.03} />
+        <IconSprinkles opacity={0.15} density="medium" colorTheme="mixed" iconTypes="all" />
         
         <div className="container relative z-10">
           <motion.div 
@@ -152,8 +154,10 @@ const About = () => {
       </section>
 
       {/* Values Section */}
-      <section className="py-20 bg-gradient-to-br from-neutral-50 to-grounded-50">
-        <div className="container">
+      <section className="py-20 bg-gradient-to-br from-neutral-50 to-grounded-50 relative overflow-hidden">
+        <IconSprinkles opacity={0.12} density="light" colorTheme="green" iconTypes="fitness" />
+        
+        <div className="container relative z-10">
           <motion.div 
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}

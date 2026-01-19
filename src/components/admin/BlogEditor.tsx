@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
@@ -83,6 +83,19 @@ const BlogEditor: React.FC<BlogEditorProps> = ({
     },
   });
 
+  // Update editor content when content prop changes
+  useEffect(() => {
+    if (editor && content) {
+      // Check if content is plain text or HTML
+      const isPlainText = !content.includes('<') && !content.includes('>');
+      const contentToSet = isPlainText ? `<p>${content}</p>` : content;
+      
+      if (editor.getHTML() !== contentToSet) {
+        editor.commands.setContent(contentToSet);
+      }
+    }
+  }, [content, editor]);
+
   const setLink = useCallback(() => {
     if (linkUrl) {
       editor?.chain().focus().setLink({ href: linkUrl }).run();
@@ -155,9 +168,16 @@ const BlogEditor: React.FC<BlogEditorProps> = ({
           >
             <Code size={16} />
           </button>
+          <button
+            onClick={() => editor.chain().focus().toggleStrike().run()}
+            className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('strike') ? 'bg-gray-200' : ''}`}
+            title="Strikethrough"
+          >
+            <Strikethrough size={16} />
+          </button>
         </div>
 
-        {/* Headings */}
+        {/* Lists */}
         <div className="flex gap-1 border-r pr-2">
           <button
             onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}

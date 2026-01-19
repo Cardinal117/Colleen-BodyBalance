@@ -83,6 +83,101 @@ const initializeSampleData = () => {
         read_time: "4 min",
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
+      },
+      {
+        id: '3',
+        title: "The Power of Plant-Based Nutrition",
+        slug: "power-plant-based-nutrition",
+        excerpt: "Discover how plant-based eating can transform your energy levels, improve digestion, and support overall wellness.",
+        content: `<h1>The Power of Plant-Based Nutrition</h1>
+        <p>Plant-based nutrition is more than just a diet—it's a lifestyle choice that can dramatically improve your health, energy levels, and overall well-being. Let's explore the science and practical benefits of embracing plant-based eating.</p>
+        
+        <h2>What Makes Plant-Based Eating Powerful?</h2>
+        <p>Plant-based diets focus on whole foods derived from plants: fruits, vegetables, whole grains, legumes, nuts, and seeds. These foods are packed with fiber, vitamins, minerals, and phytonutrients that work together to optimize your body's functions.</p>
+        
+        <h3>Key Benefits:</h3>
+        <ul>
+          <li>Increased energy and vitality</li>
+          <li>Improved digestion and gut health</li>
+          <li>Enhanced immune system function</li>
+          <li>Better weight management</li>
+          <li>Reduced inflammation</li>
+          <li>Lower risk of chronic diseases</li>
+        </ul>
+        
+        <h2>Getting Started with Plant-Based Eating</h2>
+        <p>Transitioning to a plant-based diet doesn't have to be overwhelming. Start with simple changes:</p>
+        
+        <h3>Step 1: Add More Plants</h3>
+        <p>Begin by adding more vegetables to your current meals. Try adding a side salad to lunch or extra vegetables to your dinner.</p>
+        
+        <h3>Step 2: Try Meatless Mondays</h3>
+        <p>Commit to one meat-free day per week. This helps you explore new recipes and build confidence.</p>
+        
+        <h3>Step 3: Explore Plant Proteins</h3>
+        <p>Discover the variety of plant-based proteins: lentils, beans, tofu, tempeh, nuts, and seeds.</p>
+        
+        <h2>Practical Tips for Success</h2>
+        <p>Here are some strategies to make your plant-based journey enjoyable and sustainable:</p>
+        
+        <ul>
+          <li><strong>Meal Prep:</strong> Prepare plant-based meals in advance to avoid last-minute decisions</li>
+          <li><strong>Spice It Up:</strong> Use herbs and spices to add flavor without extra calories</li>
+          <li><strong>Stay Hydrated:</strong> Drink plenty of water throughout the day</li>
+          <li><strong>Listen to Your Body:</strong> Pay attention to how different foods make you feel</li>
+        </ul>
+        
+        <h2>Sample Day of Plant-Based Eating</h2>
+        <p>Here's what a typical plant-based day might look like:</p>
+        
+        <h3>Breakfast (7:00 AM)</h3>
+        <p>Oatmeal with berries, nuts, and seeds, or a green smoothie with spinach, banana, and plant-based protein powder.</p>
+        
+        <h3>Lunch (12:30 PM)</h3>
+        <p>Large salad with mixed greens, roasted vegetables, chickpeas, and tahini dressing, or a lentil soup with whole grain bread.</p>
+        
+        <h3>Dinner (6:30 PM)</h3>
+        <p>Vegetable stir-fry with tofu and brown rice, or black bean burgers on whole grain buns with sweet potato fries.</p>
+        
+        <h3>Snacks</h3>
+        <p>Fresh fruit, nuts, hummus with vegetables, or plant-based yogurt.</p>
+        
+        <blockquote>
+        "Let food be thy medicine and medicine be thy food." - Hippocrates
+        </blockquote>
+        
+        <h2>Overcoming Common Challenges</h2>
+        <p>Every journey has its challenges. Here's how to handle common plant-based eating obstacles:</p>
+        
+        <h3>Cravings</h3>
+        <p>Cravings are normal. Try plant-based alternatives that satisfy similar taste and texture preferences.</p>
+        
+        <h3>Social Situations</h3>
+        <p>Eat before attending events, or bring a plant-based dish to share.</p>
+        
+        <h3>Nutrient Concerns</h3>
+        <p>Focus on variety and consider supplements for B12 and vitamin D if needed.</p>
+        
+        <h2>The Environmental Impact</h2>
+        <p>Plant-based eating isn't just good for you—it's good for the planet. Plant-based diets require significantly less water, land, and energy to produce compared to animal-based diets.</p>
+        
+        <h3>Water Usage</h3>
+        <p>Producing 1 pound of beef requires about 1,800 gallons of water, while 1 pound of vegetables requires only 39 gallons.</p>
+        
+        <h3>Land Usage</h3>
+        <p>Plant-based foods can feed more people using less land, helping address global food security.</p>
+        
+        <h2>Conclusion</h2>
+        <p>Plant-based nutrition offers a path to better health, increased energy, and environmental sustainability. Start where you are, make gradual changes, and enjoy the journey to a more vibrant, plant-powered life.</p>
+        
+        <p>Remember: every plant-based meal is a vote for your health and the planet's future.</p>`,
+        author: "Sarah Martinez",
+        published: true,
+        featured_image: "https://picsum.photos/seed/nutrition/800/400.jpg",
+        category: '3',
+        read_time: "6 min",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }
     ];
     localStorage.setItem(STORAGE_KEY, JSON.stringify(samplePosts));
@@ -90,9 +185,33 @@ const initializeSampleData = () => {
   
   if (!existingCategories) {
     const sampleCategories: BlogCategory[] = [
-      { id: '1', name: "Mindfulness", slug: "mindfulness", description: "Articles about mindfulness and mental wellness", created_at: new Date().toISOString() },
-      { id: '2', name: "Fitness", slug: "fitness", description: "Fitness tips and workout advice", created_at: new Date().toISOString() },
-      { id: '3', name: "Nutrition", slug: "nutrition", description: "Nutrition advice and healthy eating", created_at: new Date().toISOString() }
+      { 
+        id: '1', 
+        name: "Mindfulness", 
+        slug: "mindfulness", 
+        description: "Articles about mindfulness and mental wellness", 
+        created_at: new Date().toISOString(),
+        color: 'text-red-500',
+        bgColor: 'bg-red-50'
+      },
+      { 
+        id: '2', 
+        name: "Fitness", 
+        slug: "fitness", 
+        description: "Fitness tips and workout advice", 
+        created_at: new Date().toISOString(),
+        color: 'text-orange-500',
+        bgColor: 'bg-orange-50'
+      },
+      { 
+        id: '3', 
+        name: "Nutrition", 
+        slug: "nutrition", 
+        description: "Nutrition advice and healthy eating", 
+        created_at: new Date().toISOString(),
+        color: 'text-green-500',
+        bgColor: 'bg-green-50'
+      }
     ];
     localStorage.setItem(CATEGORIES_KEY, JSON.stringify(sampleCategories));
   }
@@ -205,3 +324,113 @@ export const categoryStorageService = {
 
 // Initialize the storage service
 blogStorageService.initialize();
+
+// Add the nutrition blog post if it doesn't exist
+const addNutritionBlogPost = () => {
+  const posts = blogStorageService.getPosts();
+  const nutritionPostExists = posts.some(post => post.slug === 'power-plant-based-nutrition');
+  
+  if (!nutritionPostExists) {
+    const nutritionPost: BlogPost = {
+      id: '3',
+      title: "The Power of Plant-Based Nutrition",
+      slug: "power-plant-based-nutrition",
+      excerpt: "Discover how plant-based eating can transform your energy levels, improve digestion, and support overall wellness.",
+      content: `<h1>The Power of Plant-Based Nutrition</h1>
+        <p>Plant-based nutrition is more than just a diet—it's a lifestyle choice that can dramatically improve your health, energy levels, and overall well-being. Let's explore the science and practical benefits of embracing plant-based eating.</p>
+        
+        <h2>What Makes Plant-Based Eating Powerful?</h2>
+        <p>Plant-based diets focus on whole foods derived from plants: fruits, vegetables, whole grains, legumes, nuts, and seeds. These foods are packed with fiber, vitamins, minerals, and phytonutrients that work together to optimize your body's functions.</p>
+        
+        <h3>Key Benefits:</h3>
+        <ul>
+          <li>Increased energy and vitality</li>
+          <li>Improved digestion and gut health</li>
+          <li>Enhanced immune system function</li>
+          <li>Better weight management</li>
+          <li>Reduced inflammation</li>
+          <li>Lower risk of chronic diseases</li>
+        </ul>
+        
+        <h2>Getting Started with Plant-Based Eating</h2>
+        <p>Transitioning to a plant-based diet doesn't have to be overwhelming. Start with simple changes:</p>
+        
+        <h3>Step 1: Add More Plants</h3>
+        <p>Begin by adding more vegetables to your current meals. Try adding a side salad to lunch or extra vegetables to your dinner.</p>
+        
+        <h3>Step 2: Try Meatless Mondays</h3>
+        <p>Commit to one meat-free day per week. This helps you explore new recipes and build confidence.</p>
+        
+        <h3>Step 3: Explore Plant Proteins</h3>
+        <p>Discover the variety of plant-based proteins: lentils, beans, tofu, tempeh, nuts, and seeds.</p>
+        
+        <h2>Practical Tips for Success</h2>
+        <p>Here are some strategies to make your plant-based journey enjoyable and sustainable:</p>
+        
+        <ul>
+          <li><strong>Meal Prep:</strong> Prepare plant-based meals in advance to avoid last-minute decisions</li>
+          <li><strong>Spice It Up:</strong> Use herbs and spices to add flavor without extra calories</li>
+          <li><strong>Stay Hydrated:</strong> Drink plenty of water throughout the day</li>
+          <li><strong>Listen to Your Body:</strong> Pay attention to how different foods make you feel</li>
+        </ul>
+        
+        <h2>Sample Day of Plant-Based Eating</h2>
+        <p>Here's what a typical plant-based day might look like:</p>
+        
+        <h3>Breakfast (7:00 AM)</h3>
+        <p>Oatmeal with berries, nuts, and seeds, or a green smoothie with spinach, banana, and plant-based protein powder.</p>
+        
+        <h3>Lunch (12:30 PM)</h3>
+        <p>Large salad with mixed greens, roasted vegetables, chickpeas, and tahini dressing, or a lentil soup with whole grain bread.</p>
+        
+        <h3>Dinner (6:30 PM)</h3>
+        <p>Vegetable stir-fry with tofu and brown rice, or black bean burgers on whole grain buns with sweet potato fries.</p>
+        
+        <h3>Snacks</h3>
+        <p>Fresh fruit, nuts, hummus with vegetables, or plant-based yogurt.</p>
+        
+        <blockquote>
+        "Let food be thy medicine and medicine be thy food." - Hippocrates
+        </blockquote>
+        
+        <h2>Overcoming Common Challenges</h2>
+        <p>Every journey has its challenges. Here's how to handle common plant-based eating obstacles:</p>
+        
+        <h3>Cravings</h3>
+        <p>Cravings are normal. Try plant-based alternatives that satisfy similar taste and texture preferences.</p>
+        
+        <h3>Social Situations</h3>
+        <p>Eat before attending events, or bring a plant-based dish to share.</p>
+        
+        <h3>Nutrient Concerns</h3>
+        <p>Focus on variety and consider supplements for B12 and vitamin D if needed.</p>
+        
+        <h2>The Environmental Impact</h2>
+        <p>Plant-based eating isn't just good for you—it's good for the planet. Plant-based diets require significantly less water, land, and energy to produce compared to animal-based diets.</p>
+        
+        <h3>Water Usage</h3>
+        <p>Producing 1 pound of beef requires about 1,800 gallons of water, while 1 pound of vegetables requires only 39 gallons.</p>
+        
+        <h3>Land Usage</h3>
+        <p>Plant-based foods can feed more people using less land, helping address global food security.</p>
+        
+        <h2>Conclusion</h2>
+        <p>Plant-based nutrition offers a path to better health, increased energy, and environmental sustainability. Start where you are, make gradual changes, and enjoy the journey to a more vibrant, plant-powered life.</p>
+        
+        <p>Remember: every plant-based meal is a vote for your health and the planet's future.</p>`,
+      author: "Sarah Martinez",
+      published: true,
+      featured_image: "https://picsum.photos/seed/nutrition/800/400.jpg",
+      category: '3',
+      read_time: "6 min",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    
+    posts.push(nutritionPost);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
+  }
+};
+
+// Call this function to ensure the nutrition post is added
+addNutritionBlogPost();
