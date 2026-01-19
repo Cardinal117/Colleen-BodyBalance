@@ -26,7 +26,6 @@ const Navbar = () => {
     { name: 'Home', href: '/' },
     { name: 'About', href: '/about' },
     { name: 'Grounded', href: '/grounded' },
-    { name: 'Contact', href: '/contact' },
   ];
 
   const trainingItems = [
@@ -229,6 +228,18 @@ const Navbar = () => {
                 )}
               </AnimatePresence>
             </div>
+
+            {/* Contact Link */}
+            <a
+              href="/contact"
+              className={`transition-colors duration-200 font-medium ${
+                isActive('/contact')
+                  ? 'text-grounded-500'
+                  : 'text-neutral-600 hover:text-grounded-500'
+              }`}
+            >
+              Contact
+            </a>
           </div>
 
           {/* Contact Info - Desktop */}
@@ -379,6 +390,25 @@ const Navbar = () => {
                   </motion.a>
                 </div>
               </div>
+
+              {/* Contact Link */}
+              <motion.a
+                href="/contact"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ 
+                  opacity: isOpen ? 1 : 0,
+                  x: isOpen ? 0 : -20 
+                }}
+                transition={{ duration: 0.2, delay: isOpen ? 0.35 : 0 }}
+                className={`block py-3 px-4 rounded-lg transition-all duration-200 font-medium ${
+                  isActive('/contact')
+                    ? 'bg-grounded-50 text-grounded-600 border-l-4 border-grounded-500' 
+                    : 'text-neutral-700 hover:bg-neutral-50 hover:text-grounded-500'
+                }`}
+                onClick={() => setIsOpen(false)}
+              >
+                Contact
+              </motion.a>
               
               {/* Contact Info */}
               <div className="mt-4 pt-4 border-t border-neutral-200">
