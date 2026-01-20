@@ -11,11 +11,13 @@ import {
   Clock,
   Search,
   Filter,
-  Tag
+  Tag,
+  MessageCircle
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { blogStorageService, categoryStorageService } from '../../lib/blogStorage';
-import type { BlogPost, BlogCategory } from '../../lib/supabase';
+import type { BlogPost, BlogCategory, BlogComment } from '../../lib/supabase';
+import commentStorageService from '../../lib/commentStorage';
 
 // Import the storage keys
 const CATEGORIES_KEY = 'bodybalance_blog_categories';
@@ -25,6 +27,8 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [categoriesData, setCategoriesData] = useState<BlogCategory[]>([]);
+  const [comments, setComments] = useState<BlogComment[]>([]);
+  const [activeTab, setActiveTab] = useState<'posts' | 'categories' | 'comments'>('posts');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
@@ -51,6 +55,7 @@ const AdminDashboard = () => {
     // Load posts from JSON storage
     loadPosts();
     loadCategories();
+    loadComments();
   }, [navigate]);
 
   const loadPosts = () => {
@@ -71,6 +76,37 @@ const AdminDashboard = () => {
     } catch (error) {
       console.error('Error loading categories:', error);
     }
+  };
+
+  const loadComments = () => {
+    try {
+      const allComments: BlogComment[] = [];
+      // Get all posts and load comments for each
+      const allPosts = blogStorageService.getPosts();
+      allPosts.forEach(post => {
+        const postComments = commentStorageService.getComments(post.id);
+        allComments.push(...postComments);
+      });
+      // Sort by date (newest first)
+      allComments.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setComments(allComments);
+    } catch (error) {
+      console.error('Error loading comments:', error);
+    }
+  };
+
+  const handleDeleteComment = (commentId: string) => {
+    try {
+      commentStorageService.deleteComment(commentId);
+      loadComments(); // Reload comments
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+    }
+  };
+
+  const getPostTitle = (postId: string): string => {
+    const post = posts.find(p => p.id === postId);
+    return post ? post.title : 'Unknown Post';
   };
 
   const handleCreateCategory = () => {
@@ -265,595 +301,709 @@ const AdminDashboard = () => {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Page Header */}
+        {/* Tab Navigation */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="font-heading text-3xl font-bold text-neutral-900">Blog Posts</h1>
-              <p className="text-neutral-600 mt-1">Manage your blog content</p>
-            </div>
-            
-            <Link
-              to="/admin/editor"
-              className="flex items-center space-x-2 bg-gradient-to-r from-grounded-500 to-earth-500 text-white px-4 py-2 rounded-lg hover:from-grounded-600 hover:to-earth-600 transition-all duration-200"
-            >
-              <Plus className="h-5 w-5" />
-              <span>New Post</span>
-            </Link>
+          <div className="border-b border-neutral-200">
+            <nav className="-mb-px flex space-x-8">
+              <button
+                onClick={() => setActiveTab('posts')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'posts'
+                    ? 'border-grounded-500 text-grounded-600'
+                    : 'border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300'
+                }`}
+              >
+                Blog Posts
+              </button>
+              <button
+                onClick={() => setActiveTab('categories')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'categories'
+                    ? 'border-grounded-500 text-grounded-600'
+                    : 'border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300'
+                }`}
+              >
+                Categories
+              </button>
+              <button
+                onClick={() => setActiveTab('comments')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'comments'
+                    ? 'border-grounded-500 text-grounded-600'
+                    : 'border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300'
+                }`}
+              >
+                Comments ({comments.length})
+              </button>
+            </nav>
           </div>
         </motion.div>
 
-        {/* Category Management */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
-          className="bg-white rounded-lg shadow p-6 mb-8"
-        >
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center space-x-2">
-              <Tag className="h-5 w-5 text-grounded-500" />
-              <h2 className="font-heading text-xl font-bold text-neutral-900">Categories</h2>
-            </div>
-            <button
-              onClick={() => setShowCategoryForm(!showCategoryForm)}
-              className="flex items-center space-x-2 bg-grounded-500 text-white px-3 py-1.5 rounded-lg hover:bg-grounded-600 transition-colors"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Add Category</span>
-            </button>
-          </div>
-
-          {/* Category Form */}
-          {showCategoryForm && (
+        {/* Posts Tab */}
+        {activeTab === 'posts' && (
+          <>
+            {/* Page Header */}
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mb-4 p-4 bg-neutral-50 rounded-lg"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-8"
             >
-              <div className="mb-4">
-                <h3 className="font-medium text-neutral-900 mb-2">
-                  {editingCategory ? 'Edit Category' : 'Add New Category'}
-                </h3>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="flex justify-between items-center">
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1">Category Name</label>
-                  <input
-                    type="text"
-                    value={newCategoryName}
-                    onChange={(e) => setNewCategoryName(e.target.value)}
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-grounded-500 focus:border-transparent"
-                    placeholder="Enter category name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1">Description</label>
-                  <input
-                    type="text"
-                    value={newCategoryDescription}
-                    onChange={(e) => setNewCategoryDescription(e.target.value)}
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-grounded-500 focus:border-transparent"
-                    placeholder="Enter description"
-                  />
-                </div>
-              </div>
-
-              {/* Color Selection */}
-              <div className="space-y-4 mb-4">
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">Text Color</label>
-                  <div className="border border-neutral-300 rounded-lg overflow-hidden">
-                    <table className="w-full">
-                      <tbody>
-                        <tr className="grid grid-cols-5">
-                          <td 
-                            className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-r border-b ${
-                              selectedColor === 'text-red-500' ? 'bg-neutral-100 ring-2 ring-red-500' : ''
-                            }`}
-                            onClick={() => {setSelectedColor('text-red-500'); setIsCustomColor(false)}}
-                          >
-                            <div className="w-6 h-6 bg-red-500 rounded mx-auto mb-1"></div>
-                            <span className="text-xs">Red</span>
-                          </td>
-                          <td 
-                            className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-r border-b ${
-                              selectedColor === 'text-orange-500' ? 'bg-neutral-100 ring-2 ring-orange-500' : ''
-                            }`}
-                            onClick={() => {setSelectedColor('text-orange-500'); setIsCustomColor(false)}}
-                          >
-                            <div className="w-6 h-6 bg-orange-500 rounded mx-auto mb-1"></div>
-                            <span className="text-xs">Orange</span>
-                          </td>
-                          <td 
-                            className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-r border-b ${
-                              selectedColor === 'text-green-500' ? 'bg-neutral-100 ring-2 ring-green-500' : ''
-                            }`}
-                            onClick={() => {setSelectedColor('text-green-500'); setIsCustomColor(false)}}
-                          >
-                            <div className="w-6 h-6 bg-green-500 rounded mx-auto mb-1"></div>
-                            <span className="text-xs">Green</span>
-                          </td>
-                          <td 
-                            className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-r border-b ${
-                              selectedColor === 'text-blue-500' ? 'bg-neutral-100 ring-2 ring-blue-500' : ''
-                            }`}
-                            onClick={() => {setSelectedColor('text-blue-500'); setIsCustomColor(false)}}
-                          >
-                            <div className="w-6 h-6 bg-blue-500 rounded mx-auto mb-1"></div>
-                            <span className="text-xs">Blue</span>
-                          </td>
-                          <td 
-                            className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-b ${
-                              selectedColor === 'text-purple-500' ? 'bg-neutral-100 ring-2 ring-purple-500' : ''
-                            }`}
-                            onClick={() => {setSelectedColor('text-purple-500'); setIsCustomColor(false)}}
-                          >
-                            <div className="w-6 h-6 bg-purple-500 rounded mx-auto mb-1"></div>
-                            <span className="text-xs">Purple</span>
-                          </td>
-                        </tr>
-                        <tr className="grid grid-cols-5">
-                          <td 
-                            className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-r border-b ${
-                              selectedColor === 'text-pink-500' ? 'bg-neutral-100 ring-2 ring-pink-500' : ''
-                            }`}
-                            onClick={() => {setSelectedColor('text-pink-500'); setIsCustomColor(false)}}
-                          >
-                            <div className="w-6 h-6 bg-pink-500 rounded mx-auto mb-1"></div>
-                            <span className="text-xs">Pink</span>
-                          </td>
-                          <td 
-                            className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-r border-b ${
-                              selectedColor === 'text-indigo-500' ? 'bg-neutral-100 ring-2 ring-indigo-500' : ''
-                            }`}
-                            onClick={() => {setSelectedColor('text-indigo-500'); setIsCustomColor(false)}}
-                          >
-                            <div className="w-6 h-6 bg-indigo-500 rounded mx-auto mb-1"></div>
-                            <span className="text-xs">Indigo</span>
-                          </td>
-                          <td 
-                            className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-r border-b ${
-                              selectedColor === 'text-grounded-500' ? 'bg-neutral-100 ring-2 ring-green-600' : ''
-                            }`}
-                            onClick={() => {setSelectedColor('text-grounded-500'); setIsCustomColor(false)}}
-                          >
-                            <div className="w-6 h-6 bg-green-600 rounded mx-auto mb-1"></div>
-                            <span className="text-xs">Grounded</span>
-                          </td>
-                          <td 
-                            className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-r border-b ${
-                              selectedColor === 'text-earth-500' ? 'bg-neutral-100 ring-2 ring-yellow-600' : ''
-                            }`}
-                            onClick={() => {setSelectedColor('text-earth-500'); setIsCustomColor(false)}}
-                          >
-                            <div className="w-6 h-6 bg-yellow-600 rounded mx-auto mb-1"></div>
-                            <span className="text-xs">Earth</span>
-                          </td>
-                          <td 
-                            className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-b ${
-                              selectedColor === 'text-neutral-500' ? 'bg-neutral-100 ring-2 ring-gray-500' : ''
-                            }`}
-                            onClick={() => {setSelectedColor('text-neutral-500'); setIsCustomColor(false)}}
-                          >
-                            <div className="w-6 h-6 bg-gray-500 rounded mx-auto mb-1"></div>
-                            <span className="text-xs">Neutral</span>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td colSpan={5} className={`p-2 border-b ${isCustomColor ? 'bg-neutral-100 ring-2 ring-blue-500' : ''}`}>
-                            <div className="flex items-center space-x-2">
-                              <input
-                                type="color"
-                                value={customColor}
-                                onChange={(e) => {setCustomColor(e.target.value); setSelectedColor(e.target.value); setIsCustomColor(true)}}
-                                className="w-8 h-8 border border-neutral-300 rounded cursor-pointer"
-                              />
-                              <span className="text-sm text-neutral-600">Custom Color</span>
-                              <input
-                                type="text"
-                                value={customColor}
-                                onChange={(e) => {setCustomColor(e.target.value); setSelectedColor(e.target.value); setIsCustomColor(true)}}
-                                className="px-2 py-1 text-sm border border-neutral-300 rounded"
-                                placeholder="#000000"
-                              />
-                            </div>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
+                  <h1 className="font-heading text-3xl font-bold text-neutral-900">Blog Posts</h1>
+                  <p className="text-neutral-600 mt-1">Manage your blog content</p>
                 </div>
                 
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">Background Color</label>
-                  <div className="border border-neutral-300 rounded-lg overflow-hidden">
-                    <table className="w-full">
-                      <tbody>
-                        <tr className="grid grid-cols-5">
-                          <td 
-                            className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-r border-b ${
-                              selectedBgColor === 'bg-red-50' ? 'bg-neutral-100 ring-2 ring-red-300' : ''
-                            }`}
-                            onClick={() => {setSelectedBgColor('bg-red-50'); setIsCustomBgColor(false)}}
-                          >
-                            <div className="w-6 h-6 bg-red-100 rounded mx-auto mb-1 border border-red-200"></div>
-                            <span className="text-xs">Red</span>
-                          </td>
-                          <td 
-                            className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-r border-b ${
-                              selectedBgColor === 'bg-orange-50' ? 'bg-neutral-100 ring-2 ring-orange-300' : ''
-                            }`}
-                            onClick={() => {setSelectedBgColor('bg-orange-50'); setIsCustomBgColor(false)}}
-                          >
-                            <div className="w-6 h-6 bg-orange-100 rounded mx-auto mb-1 border border-orange-200"></div>
-                            <span className="text-xs">Orange</span>
-                          </td>
-                          <td 
-                            className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-r border-b ${
-                              selectedBgColor === 'bg-green-50' ? 'bg-neutral-100 ring-2 ring-green-300' : ''
-                            }`}
-                            onClick={() => {setSelectedBgColor('bg-green-50'); setIsCustomBgColor(false)}}
-                          >
-                            <div className="w-6 h-6 bg-green-100 rounded mx-auto mb-1 border border-green-200"></div>
-                            <span className="text-xs">Green</span>
-                          </td>
-                          <td 
-                            className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-r border-b ${
-                              selectedBgColor === 'bg-blue-50' ? 'bg-neutral-100 ring-2 ring-blue-300' : ''
-                            }`}
-                            onClick={() => {setSelectedBgColor('bg-blue-50'); setIsCustomBgColor(false)}}
-                          >
-                            <div className="w-6 h-6 bg-blue-100 rounded mx-auto mb-1 border border-blue-200"></div>
-                            <span className="text-xs">Blue</span>
-                          </td>
-                          <td 
-                            className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-b ${
-                              selectedBgColor === 'bg-purple-50' ? 'bg-neutral-100 ring-2 ring-purple-300' : ''
-                            }`}
-                            onClick={() => {setSelectedBgColor('bg-purple-50'); setIsCustomBgColor(false)}}
-                          >
-                            <div className="w-6 h-6 bg-purple-100 rounded mx-auto mb-1 border border-purple-200"></div>
-                            <span className="text-xs">Purple</span>
-                          </td>
-                        </tr>
-                        <tr className="grid grid-cols-5">
-                          <td 
-                            className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-r border-b ${
-                              selectedBgColor === 'bg-pink-50' ? 'bg-neutral-100 ring-2 ring-pink-300' : ''
-                            }`}
-                            onClick={() => {setSelectedBgColor('bg-pink-50'); setIsCustomBgColor(false)}}
-                          >
-                            <div className="w-6 h-6 bg-pink-100 rounded mx-auto mb-1 border border-pink-200"></div>
-                            <span className="text-xs">Pink</span>
-                          </td>
-                          <td 
-                            className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-r border-b ${
-                              selectedBgColor === 'bg-indigo-50' ? 'bg-neutral-100 ring-2 ring-indigo-300' : ''
-                            }`}
-                            onClick={() => {setSelectedBgColor('bg-indigo-50'); setIsCustomBgColor(false)}}
-                          >
-                            <div className="w-6 h-6 bg-indigo-100 rounded mx-auto mb-1 border border-indigo-200"></div>
-                            <span className="text-xs">Indigo</span>
-                          </td>
-                          <td 
-                            className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-r border-b ${
-                              selectedBgColor === 'bg-grounded-50' ? 'bg-neutral-100 ring-2 ring-green-300' : ''
-                            }`}
-                            onClick={() => {setSelectedBgColor('bg-grounded-50'); setIsCustomBgColor(false)}}
-                          >
-                            <div className="w-6 h-6 bg-green-50 rounded mx-auto mb-1 border border-green-200"></div>
-                            <span className="text-xs">Grounded</span>
-                          </td>
-                          <td 
-                            className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-r border-b ${
-                              selectedBgColor === 'bg-earth-50' ? 'bg-neutral-100 ring-2 ring-yellow-300' : ''
-                            }`}
-                            onClick={() => {setSelectedBgColor('bg-earth-50'); setIsCustomBgColor(false)}}
-                          >
-                            <div className="w-6 h-6 bg-yellow-50 rounded mx-auto mb-1 border border-yellow-200"></div>
-                            <span className="text-xs">Earth</span>
-                          </td>
-                          <td 
-                            className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-b ${
-                              selectedBgColor === 'bg-neutral-50' ? 'bg-neutral-100 ring-2 ring-gray-300' : ''
-                            }`}
-                            onClick={() => {setSelectedBgColor('bg-neutral-50'); setIsCustomBgColor(false)}}
-                          >
-                            <div className="w-6 h-6 bg-gray-50 rounded mx-auto mb-1 border border-gray-200"></div>
-                            <span className="text-xs">Neutral</span>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td colSpan={5} className={`p-2 ${isCustomBgColor ? 'bg-neutral-100 ring-2 ring-blue-500' : ''}`}>
-                            <div className="flex items-center space-x-2">
-                              <input
-                                type="color"
-                                value={customColor}
-                                onChange={(e) => {setCustomColor(e.target.value); setSelectedBgColor(`bg-[${e.target.value}]`); setIsCustomBgColor(true)}}
-                                className="w-8 h-8 border border-neutral-300 rounded cursor-pointer"
-                              />
-                              <span className="text-sm text-neutral-600">Custom Background</span>
-                              <input
-                                type="text"
-                                value={customColor}
-                                onChange={(e) => {setCustomColor(e.target.value); setSelectedBgColor(`bg-[${e.target.value}]`); setIsCustomBgColor(true)}}
-                                className="px-2 py-1 text-sm border border-neutral-300 rounded"
-                                placeholder="#F3F4F6"
-                              />
-                            </div>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
+                <Link
+                  to="/admin/editor"
+                  className="flex items-center space-x-2 bg-gradient-to-r from-grounded-500 to-earth-500 text-white px-4 py-2 rounded-lg hover:from-grounded-600 hover:to-earth-600 transition-all duration-200"
+                >
+                  <Plus className="h-5 w-5" />
+                  <span>New Post</span>
+                </Link>
+              </div>
+            </motion.div>
+
+            {/* Stats */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8"
+            >
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0 bg-grounded-100 rounded-lg p-3">
+                    <FileText className="h-6 w-6 text-grounded-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-neutral-600">Total Posts</p>
+                    <p className="text-2xl font-bold text-neutral-900">{posts.length}</p>
                   </div>
                 </div>
               </div>
-
-              {/* Preview */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-neutral-700 mb-2">Preview</label>
-                <div className={`inline-flex px-3 py-1.5 rounded-full ${selectedBgColor} ${selectedColor}`}>
-                  <span className="text-sm font-medium">{newCategoryName || 'Category Name'}</span>
+              
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0 bg-green-100 rounded-lg p-3">
+                    <Eye className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-neutral-600">Published</p>
+                    <p className="text-2xl font-bold text-neutral-900">{posts.filter(p => p.published).length}</p>
+                  </div>
                 </div>
               </div>
-
-              <div className="flex justify-end space-x-2">
-                <button
-                  onClick={handleCancelEdit}
-                  className="px-4 py-2 text-neutral-600 hover:text-neutral-900 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleCreateCategory}
-                  className="px-4 py-2 bg-grounded-500 text-white rounded-lg hover:bg-grounded-600 transition-colors"
-                >
-                  {editingCategory ? 'Update Category' : 'Create Category'}
-                </button>
+              
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0 bg-yellow-100 rounded-lg p-3">
+                    <Clock className="h-6 w-6 text-yellow-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-neutral-600">Drafts</p>
+                    <p className="text-2xl font-bold text-neutral-900">{posts.filter(p => !p.published).length}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0 bg-earth-100 rounded-lg p-3">
+                    <User className="h-6 w-6 text-earth-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-neutral-600">Authors</p>
+                    <p className="text-2xl font-bold text-neutral-900">{new Set(posts.map(p => p.author)).size}</p>
+                  </div>
+                </div>
               </div>
             </motion.div>
-          )}
 
-          {/* Categories List */}
-          <div className="flex flex-wrap gap-2">
-            {categoriesData.map((category) => (
-              <div
-                key={category.id}
-                className={`flex items-center space-x-2 px-3 py-1.5 rounded-full ${category.bgColor || 'bg-grounded-100'} ${category.color || 'text-grounded-800'}`}
-              >
-                <span className="text-sm font-medium">{category.name}</span>
+            {/* Search and Filter */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="bg-white rounded-lg shadow p-6 mb-8"
+            >
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400 h-5 w-5" />
+                  <input
+                    type="text"
+                    placeholder="Search posts..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-grounded-500 focus:border-transparent"
+                  />
+                </div>
+                
+                <div className="relative">
+                  <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400 h-5 w-5" />
+                  <select
+                    value={filterCategory}
+                    onChange={(e) => setFilterCategory(e.target.value)}
+                    className="pl-10 pr-8 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-grounded-500 focus:border-transparent appearance-none"
+                  >
+                    {categories.map(category => (
+                      <option key={category.value} value={category.value}>
+                        {category.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Posts Table */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="bg-white rounded-lg shadow overflow-hidden"
+            >
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-neutral-200">
+                  <thead className="bg-neutral-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                        Title
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                        Category
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                        Author
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                        Date
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                        Likes
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                        Views
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-neutral-200">
+                    {filteredPosts.map((post, index) => (
+                      <motion.tr
+                        key={post.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.4 + index * 0.1 }}
+                        className="hover:bg-neutral-50"
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div>
+                            <div className="text-sm font-medium text-neutral-900">{post.title}</div>
+                            <div className="text-sm text-neutral-500 truncate max-w-xs">{post.excerpt}</div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getCategoryColors(post.category).bgColor} ${getCategoryColors(post.category).color}`}>
+                            {getCategoryName(post.category)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-900">
+                          {post.author}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            post.published 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {post.published ? 'Published' : 'Draft'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-500">
+                          {new Date(post.created_at).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-900">
+                          {post.likes || 0}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-900">
+                          {post.views || 0}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="flex items-center justify-end space-x-2">
+                            <Link
+                              to={`/blog/${post.slug}`}
+                              target="_blank"
+                              className="text-neutral-600 hover:text-neutral-900"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Link>
+                            <Link
+                              to={`/admin/editor/${post.slug}`}
+                              className="text-grounded-600 hover:text-grounded-900"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Link>
+                            <button
+                              onClick={() => handleTogglePublish(post.id)}
+                              className={`${
+                                post.published ? 'text-green-600 hover:text-green-900' : 'text-yellow-600 hover:text-yellow-900'
+                              }`}
+                            >
+                              {post.published ? <Eye className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
+                            </button>
+                            <button
+                              onClick={() => handleDelete(post.id)}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              {filteredPosts.length === 0 && (
+                <div className="text-center py-12">
+                  <FileText className="h-12 w-12 text-neutral-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-neutral-900 mb-2">No posts found</h3>
+                  <p className="text-neutral-500">Get started by creating a new post.</p>
+                </div>
+              )}
+            </motion.div>
+          </>
+        )}
+
+        {/* Categories Tab */}
+        {activeTab === 'categories' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+          >
+            <div className="bg-white rounded-lg shadow p-6 mb-8">
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center space-x-2">
+                  <Tag className="h-5 w-5 text-grounded-500" />
+                  <h2 className="font-heading text-xl font-bold text-neutral-900">Categories</h2>
+                </div>
                 <button
-                  onClick={() => handleEditCategory(category)}
-                  className={`${category.color || 'text-grounded-600'} hover:text-blue-600 transition-colors`}
-                  title="Edit category"
+                  onClick={() => setShowCategoryForm(!showCategoryForm)}
+                  className="flex items-center space-x-2 bg-grounded-500 text-white px-3 py-1.5 rounded-lg hover:bg-grounded-600 transition-colors"
                 >
-                  <Edit className="h-3 w-3" />
-                </button>
-                <button
-                  onClick={() => handleDeleteCategory(category.id)}
-                  className={`${category.color || 'text-grounded-600'} hover:text-red-600 transition-colors`}
-                  title="Delete category"
-                >
-                  <Trash2 className="h-3 w-3" />
+                  <Plus className="h-4 w-4" />
+                  <span>Add Category</span>
                 </button>
               </div>
-            ))}
-            {categoriesData.length === 0 && (
-              <p className="text-neutral-500 text-sm">No categories created yet</p>
-            )}
-          </div>
-        </motion.div>
 
-        {/* Stats */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8"
-        >
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 bg-grounded-100 rounded-lg p-3">
-                <FileText className="h-6 w-6 text-grounded-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-neutral-600">Total Posts</p>
-                <p className="text-2xl font-bold text-neutral-900">{posts.length}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 bg-green-100 rounded-lg p-3">
-                <Eye className="h-6 w-6 text-green-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-neutral-600">Published</p>
-                <p className="text-2xl font-bold text-neutral-900">{posts.filter(p => p.published).length}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 bg-yellow-100 rounded-lg p-3">
-                <Clock className="h-6 w-6 text-yellow-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-neutral-600">Drafts</p>
-                <p className="text-2xl font-bold text-neutral-900">{posts.filter(p => !p.published).length}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 bg-earth-100 rounded-lg p-3">
-                <User className="h-6 w-6 text-earth-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-neutral-600">Authors</p>
-                <p className="text-2xl font-bold text-neutral-900">{new Set(posts.map(p => p.author)).size}</p>
-              </div>
-            </div>
-          </div>
-        </motion.div>
+              {/* Category Form */}
+              {showCategoryForm && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mb-4 p-4 bg-neutral-50 rounded-lg"
+                >
+                  <div className="mb-4">
+                    <h3 className="font-medium text-neutral-900 mb-2">
+                      {editingCategory ? 'Edit Category' : 'Add New Category'}
+                    </h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700 mb-1">Category Name</label>
+                      <input
+                        type="text"
+                        value={newCategoryName}
+                        onChange={(e) => setNewCategoryName(e.target.value)}
+                        className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-grounded-500 focus:border-transparent"
+                        placeholder="Enter category name"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700 mb-1">Description</label>
+                      <input
+                        type="text"
+                        value={newCategoryDescription}
+                        onChange={(e) => setNewCategoryDescription(e.target.value)}
+                        className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-grounded-500 focus:border-transparent"
+                        placeholder="Enter description"
+                      />
+                    </div>
+                  </div>
 
-        {/* Search and Filter */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-white rounded-lg shadow p-6 mb-8"
-        >
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400 h-5 w-5" />
-              <input
-                type="text"
-                placeholder="Search posts..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-grounded-500 focus:border-transparent"
-              />
+                  {/* Color Selection */}
+                  <div className="space-y-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700 mb-2">Text Color</label>
+                      <div className="border border-neutral-300 rounded-lg overflow-hidden">
+                        <table className="w-full">
+                          <tbody>
+                            <tr className="grid grid-cols-5">
+                              <td 
+                                className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-r border-b ${
+                                  selectedColor === 'text-red-500' ? 'bg-neutral-100 ring-2 ring-red-500' : ''
+                                }`}
+                                onClick={() => {setSelectedColor('text-red-500'); setIsCustomColor(false)}}
+                              >
+                                <div className="w-6 h-6 bg-red-500 rounded mx-auto mb-1"></div>
+                                <span className="text-xs">Red</span>
+                              </td>
+                              <td 
+                                className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-r border-b ${
+                                  selectedColor === 'text-orange-500' ? 'bg-neutral-100 ring-2 ring-orange-500' : ''
+                                }`}
+                                onClick={() => {setSelectedColor('text-orange-500'); setIsCustomColor(false)}}
+                              >
+                                <div className="w-6 h-6 bg-orange-500 rounded mx-auto mb-1"></div>
+                                <span className="text-xs">Orange</span>
+                              </td>
+                              <td 
+                                className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-r border-b ${
+                                  selectedColor === 'text-green-500' ? 'bg-neutral-100 ring-2 ring-green-500' : ''
+                                }`}
+                                onClick={() => {setSelectedColor('text-green-500'); setIsCustomColor(false)}}
+                              >
+                                <div className="w-6 h-6 bg-green-500 rounded mx-auto mb-1"></div>
+                                <span className="text-xs">Green</span>
+                              </td>
+                              <td 
+                                className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-r border-b ${
+                                  selectedColor === 'text-blue-500' ? 'bg-neutral-100 ring-2 ring-blue-500' : ''
+                                }`}
+                                onClick={() => {setSelectedColor('text-blue-500'); setIsCustomColor(false)}}
+                              >
+                                <div className="w-6 h-6 bg-blue-500 rounded mx-auto mb-1"></div>
+                                <span className="text-xs">Blue</span>
+                              </td>
+                              <td 
+                                className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-b ${
+                                  selectedColor === 'text-purple-500' ? 'bg-neutral-100 ring-2 ring-purple-500' : ''
+                                }`}
+                                onClick={() => {setSelectedColor('text-purple-500'); setIsCustomColor(false)}}
+                              >
+                                <div className="w-6 h-6 bg-purple-500 rounded mx-auto mb-1"></div>
+                                <span className="text-xs">Purple</span>
+                              </td>
+                            </tr>
+                            <tr className="grid grid-cols-5">
+                              <td 
+                                className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-r border-b ${
+                                  selectedColor === 'text-pink-500' ? 'bg-neutral-100 ring-2 ring-pink-500' : ''
+                                }`}
+                                onClick={() => {setSelectedColor('text-pink-500'); setIsCustomColor(false)}}
+                              >
+                                <div className="w-6 h-6 bg-pink-500 rounded mx-auto mb-1"></div>
+                                <span className="text-xs">Pink</span>
+                              </td>
+                              <td 
+                                className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-r border-b ${
+                                  selectedColor === 'text-indigo-500' ? 'bg-neutral-100 ring-2 ring-indigo-500' : ''
+                                }`}
+                                onClick={() => {setSelectedColor('text-indigo-500'); setIsCustomColor(false)}}
+                              >
+                                <div className="w-6 h-6 bg-indigo-500 rounded mx-auto mb-1"></div>
+                                <span className="text-xs">Indigo</span>
+                              </td>
+                              <td 
+                                className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-r border-b ${
+                                  selectedColor === 'text-grounded-500' ? 'bg-neutral-100 ring-2 ring-green-600' : ''
+                                }`}
+                                onClick={() => {setSelectedColor('text-grounded-500'); setIsCustomColor(false)}}
+                              >
+                                <div className="w-6 h-6 bg-green-600 rounded mx-auto mb-1"></div>
+                                <span className="text-xs">Grounded</span>
+                              </td>
+                              <td 
+                                className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-r border-b ${
+                                  selectedColor === 'text-earth-500' ? 'bg-neutral-100 ring-2 ring-yellow-600' : ''
+                                }`}
+                                onClick={() => {setSelectedColor('text-earth-500'); setIsCustomColor(false)}}
+                              >
+                                <div className="w-6 h-6 bg-yellow-600 rounded mx-auto mb-1"></div>
+                                <span className="text-xs">Earth</span>
+                              </td>
+                              <td 
+                                className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-b ${
+                                  selectedColor === 'text-neutral-500' ? 'bg-neutral-100 ring-2 ring-gray-500' : ''
+                                }`}
+                                onClick={() => {setSelectedColor('text-neutral-500'); setIsCustomColor(false)}}
+                              >
+                                <div className="w-6 h-6 bg-gray-500 rounded mx-auto mb-1"></div>
+                                <span className="text-xs">Neutral</span>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td colSpan={5} className={`p-2 border-b ${isCustomColor ? 'bg-neutral-100 ring-2 ring-blue-500' : ''}`}>
+                                <div className="flex items-center space-x-2">
+                                  <input
+                                    type="color"
+                                    value={customColor}
+                                    onChange={(e) => {setCustomColor(e.target.value); setSelectedColor(e.target.value); setIsCustomColor(true)}}
+                                    className="w-8 h-8 border border-neutral-300 rounded cursor-pointer"
+                                  />
+                                  <span className="text-sm text-neutral-600">Custom Color</span>
+                                  <input
+                                    type="text"
+                                    value={customColor}
+                                    onChange={(e) => {setCustomColor(e.target.value); setSelectedColor(e.target.value); setIsCustomColor(true)}}
+                                    className="px-2 py-1 text-sm border border-neutral-300 rounded"
+                                    placeholder="#000000"
+                                  />
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700 mb-2">Background Color</label>
+                      <div className="border border-neutral-300 rounded-lg overflow-hidden">
+                        <table className="w-full">
+                          <tbody>
+                            <tr className="grid grid-cols-5">
+                              <td 
+                                className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-r border-b ${
+                                  selectedBgColor === 'bg-red-50' ? 'bg-neutral-100 ring-2 ring-red-300' : ''
+                                }`}
+                                onClick={() => {setSelectedBgColor('bg-red-50'); setIsCustomBgColor(false)}}
+                              >
+                                <div className="w-6 h-6 bg-red-100 rounded mx-auto mb-1 border border-red-200"></div>
+                                <span className="text-xs">Red</span>
+                              </td>
+                              <td 
+                                className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-r border-b ${
+                                  selectedBgColor === 'bg-orange-50' ? 'bg-neutral-100 ring-2 ring-orange-300' : ''
+                                }`}
+                                onClick={() => {setSelectedBgColor('bg-orange-50'); setIsCustomBgColor(false)}}
+                              >
+                                <div className="w-6 h-6 bg-orange-100 rounded mx-auto mb-1 border border-orange-200"></div>
+                                <span className="text-xs">Orange</span>
+                              </td>
+                              <td 
+                                className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-r border-b ${
+                                  selectedBgColor === 'bg-green-50' ? 'bg-neutral-100 ring-2 ring-green-300' : ''
+                                }`}
+                                onClick={() => {setSelectedBgColor('bg-green-50'); setIsCustomBgColor(false)}}
+                              >
+                                <div className="w-6 h-6 bg-green-100 rounded mx-auto mb-1 border border-green-200"></div>
+                                <span className="text-xs">Green</span>
+                              </td>
+                              <td 
+                                className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-r border-b ${
+                                  selectedBgColor === 'bg-blue-50' ? 'bg-neutral-100 ring-2 ring-blue-300' : ''
+                                }`}
+                                onClick={() => {setSelectedBgColor('bg-blue-50'); setIsCustomBgColor(false)}}
+                              >
+                                <div className="w-6 h-6 bg-blue-100 rounded mx-auto mb-1 border border-blue-200"></div>
+                                <span className="text-xs">Blue</span>
+                              </td>
+                              <td 
+                                className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-b ${
+                                  selectedBgColor === 'bg-purple-50' ? 'bg-neutral-100 ring-2 ring-purple-300' : ''
+                                }`}
+                                onClick={() => {setSelectedBgColor('bg-purple-50'); setIsCustomBgColor(false)}}
+                              >
+                                <div className="w-6 h-6 bg-purple-100 rounded mx-auto mb-1 border border-purple-200"></div>
+                                <span className="text-xs">Purple</span>
+                              </td>
+                            </tr>
+                            <tr className="grid grid-cols-5">
+                              <td 
+                                className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-r border-b ${
+                                  selectedBgColor === 'bg-pink-50' ? 'bg-neutral-100 ring-2 ring-pink-300' : ''
+                                }`}
+                                onClick={() => {setSelectedBgColor('bg-pink-50'); setIsCustomBgColor(false)}}
+                              >
+                                <div className="w-6 h-6 bg-pink-100 rounded mx-auto mb-1 border border-pink-200"></div>
+                                <span className="text-xs">Pink</span>
+                              </td>
+                              <td 
+                                className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-r border-b ${
+                                  selectedBgColor === 'bg-indigo-50' ? 'bg-neutral-100 ring-2 ring-indigo-300' : ''
+                                }`}
+                                onClick={() => {setSelectedBgColor('bg-indigo-50'); setIsCustomBgColor(false)}}
+                              >
+                                <div className="w-6 h-6 bg-indigo-100 rounded mx-auto mb-1 border border-indigo-200"></div>
+                                <span className="text-xs">Indigo</span>
+                              </td>
+                              <td 
+                                className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-r border-b ${
+                                  selectedBgColor === 'bg-grounded-50' ? 'bg-neutral-100 ring-2 ring-green-300' : ''
+                                }`}
+                                onClick={() => {setSelectedBgColor('bg-grounded-50'); setIsCustomBgColor(false)}}
+                              >
+                                <div className="w-6 h-6 bg-green-50 rounded mx-auto mb-1 border border-green-200"></div>
+                                <span className="text-xs">Grounded</span>
+                              </td>
+                              <td 
+                                className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-r border-b ${
+                                  selectedBgColor === 'bg-earth-50' ? 'bg-neutral-100 ring-2 ring-yellow-300' : ''
+                                }`}
+                                onClick={() => {setSelectedBgColor('bg-earth-50'); setIsCustomBgColor(false)}}
+                              >
+                                <div className="w-6 h-6 bg-yellow-50 rounded mx-auto mb-1 border border-yellow-200"></div>
+                                <span className="text-xs">Earth</span>
+                              </td>
+                              <td 
+                                className={`p-2 text-center cursor-pointer hover:bg-neutral-100 border-b ${
+                                  selectedBgColor === 'bg-neutral-50' ? 'bg-neutral-100 ring-2 ring-gray-300' : ''
+                                }`}
+                                onClick={() => {setSelectedBgColor('bg-neutral-50'); setIsCustomBgColor(false)}}
+                              >
+                                <div className="w-6 h-6 bg-gray-50 rounded mx-auto mb-1 border border-gray-200"></div>
+                                <span className="text-xs">Neutral</span>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td colSpan={5} className={`p-2 ${isCustomBgColor ? 'bg-neutral-100 ring-2 ring-blue-500' : ''}`}>
+                                <div className="flex items-center space-x-2">
+                                  <input
+                                    type="color"
+                                    value={customColor}
+                                    onChange={(e) => {setCustomColor(e.target.value); setSelectedBgColor(`bg-[${e.target.value}]`); setIsCustomBgColor(true)}}
+                                    className="w-8 h-8 border border-neutral-300 rounded cursor-pointer"
+                                  />
+                                  <span className="text-sm text-neutral-600">Custom Background</span>
+                                  <input
+                                    type="text"
+                                    value={customColor}
+                                    onChange={(e) => {setCustomColor(e.target.value); setSelectedBgColor(`bg-[${e.target.value}]`); setIsCustomBgColor(true)}}
+                                    className="px-2 py-1 text-sm border border-neutral-300 rounded"
+                                    placeholder="#F3F4F6"
+                                  />
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Preview */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-neutral-700 mb-2">Preview</label>
+                    <div className={`inline-flex px-3 py-1.5 rounded-full ${selectedBgColor} ${selectedColor}`}>
+                      <span className="text-sm font-medium">{newCategoryName || 'Category Name'}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end space-x-2">
+                    <button
+                      onClick={handleCancelEdit}
+                      className="px-4 py-2 text-neutral-600 hover:text-neutral-900 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleCreateCategory}
+                      className="px-4 py-2 bg-grounded-500 text-white rounded-lg hover:bg-grounded-600 transition-colors"
+                    >
+                      {editingCategory ? 'Update Category' : 'Create Category'}
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Categories List */}
+              <div className="flex flex-wrap gap-2">
+                {categoriesData.map((category) => (
+                  <div
+                    key={category.id}
+                    className={`flex items-center space-x-2 px-3 py-1.5 rounded-full ${category.bgColor || 'bg-grounded-100'} ${category.color || 'text-grounded-800'}`}
+                  >
+                    <span className="text-sm font-medium">{category.name}</span>
+                    <button
+                      onClick={() => handleEditCategory(category)}
+                      className={`${category.color || 'text-grounded-600'} hover:text-blue-600 transition-colors`}
+                      title="Edit category"
+                    >
+                      <Edit className="h-3 w-3" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteCategory(category.id)}
+                      className={`${category.color || 'text-grounded-600'} hover:text-red-600 transition-colors`}
+                      title="Delete category"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+                {categoriesData.length === 0 && (
+                  <p className="text-neutral-500 text-sm">No categories created yet</p>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Comments Tab */}
+        {activeTab === 'comments' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-white rounded-lg shadow p-6"
+          >
+            <div className="flex items-center space-x-2 mb-6">
+              <MessageCircle className="h-5 w-5 text-grounded-500" />
+              <h2 className="font-heading text-xl font-bold text-neutral-900">Comments</h2>
             </div>
             
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400 h-5 w-5" />
-              <select
-                value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value)}
-                className="pl-10 pr-8 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-grounded-500 focus:border-transparent appearance-none"
-              >
-                {categories.map(category => (
-                  <option key={category.value} value={category.value}>
-                    {category.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Posts Table */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="bg-white rounded-lg shadow overflow-hidden"
-        >
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-neutral-200">
-              <thead className="bg-neutral-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                    Title
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                    Category
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                    Author
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-neutral-200">
-                {filteredPosts.map((post, index) => (
-                  <motion.tr
-                    key={post.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.4 + index * 0.1 }}
-                    className="hover:bg-neutral-50"
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap">
+            {comments.length === 0 ? (
+              <div className="text-center py-12">
+                <MessageCircle className="h-12 w-12 text-neutral-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-neutral-900 mb-2">No comments yet</h3>
+                <p className="text-neutral-500">Comments will appear here when users leave feedback on blog posts.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {comments.map((comment) => (
+                  <div key={comment.id} className="border border-neutral-200 rounded-lg p-4">
+                    <div className="flex justify-between items-start mb-3">
                       <div>
-                        <div className="text-sm font-medium text-neutral-900">{post.title}</div>
-                        <div className="text-sm text-neutral-500 truncate max-w-xs">{post.excerpt}</div>
+                        <h4 className="font-semibold text-neutral-900">{comment.author}</h4>
+                        <p className="text-sm text-neutral-600">{comment.email}</p>
+                        <p className="text-xs text-neutral-500 mt-1">On: {getPostTitle(comment.post_id)}</p>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getCategoryColors(post.category).bgColor} ${getCategoryColors(post.category).color}`}>
-                        {getCategoryName(post.category)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-900">
-                      {post.author}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        post.published 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {post.published ? 'Published' : 'Draft'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-500">
-                      {new Date(post.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end space-x-2">
-                        <Link
-                          to={`/blog/${post.slug}`}
-                          target="_blank"
-                          className="text-neutral-600 hover:text-neutral-900"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Link>
-                        <Link
-                          to={`/admin/editor/${post.slug}`}
-                          className="text-grounded-600 hover:text-grounded-900"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Link>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs text-neutral-500">
+                          {new Date(comment.created_at).toLocaleDateString()}
+                        </span>
                         <button
-                          onClick={() => handleTogglePublish(post.id)}
-                          className={`${
-                            post.published ? 'text-green-600 hover:text-green-900' : 'text-yellow-600 hover:text-yellow-900'
-                          }`}
+                          onClick={() => handleDeleteComment(comment.id)}
+                          className="text-red-500 hover:text-red-700 transition-colors"
+                          title="Delete comment"
                         >
-                          {post.published ? <Eye className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
-                        </button>
-                        <button
-                          onClick={() => handleDelete(post.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 size={14} />
                         </button>
                       </div>
-                    </td>
-                  </motion.tr>
+                    </div>
+                    <div className="prose prose-sm max-w-none text-neutral-700">
+                      <p>{comment.content}</p>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </div>
-          
-          {filteredPosts.length === 0 && (
-            <div className="text-center py-12">
-              <FileText className="h-12 w-12 text-neutral-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-neutral-900 mb-2">No posts found</h3>
-              <p className="text-neutral-500">Get started by creating a new post.</p>
-            </div>
-          )}
-        </motion.div>
+              </div>
+            )}
+          </motion.div>
+        )}
       </main>
 
       {/* Delete Confirmation Modal */}

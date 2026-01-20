@@ -191,6 +191,8 @@ const Blog = () => {
                     date={new Date(post.created_at).toLocaleDateString()}
                     author={post.author}
                     readTime={post.read_time}
+                    likes={post.likes}
+                    views={post.views}
                     cardStyle="white"
                   />
                 </motion.div>

@@ -48,6 +48,8 @@ const initializeSampleData = () => {
         featured_image: "https://picsum.photos/seed/mindful/800/400.jpg",
         category: '1',
         read_time: "5 min",
+        likes: 42,
+        views: 156,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       },
@@ -81,6 +83,8 @@ const initializeSampleData = () => {
         featured_image: "https://picsum.photos/seed/habits/800/400.jpg",
         category: '2',
         read_time: "4 min",
+        likes: 28,
+        views: 89,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       },
@@ -176,6 +180,8 @@ const initializeSampleData = () => {
         featured_image: "https://picsum.photos/seed/nutrition/800/400.jpg",
         category: '3',
         read_time: "6 min",
+        likes: 35,
+        views: 124,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }
@@ -253,6 +259,8 @@ export const blogStorageService = {
     const newPost: BlogPost = {
       ...post,
       id: posts.length > 0 ? (Math.max(...posts.map(p => parseInt(p.id))) + 1).toString() : '1',
+      likes: 0,
+      views: 0,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
@@ -292,7 +300,34 @@ export const blogStorageService = {
     if (!post) return null;
     
     return blogStorageService.updatePost(id, { published: !post.published });
-  }
+  },
+
+  // Like a blog post
+  likePost: (id: string): BlogPost | null => {
+    const post = blogStorageService.getPostById(id);
+    if (!post) return null;
+    
+    return blogStorageService.updatePost(id, { likes: post.likes + 1 });
+  },
+
+  // Increment view count with session tracking
+  incrementViews: (id: string): BlogPost | null => {
+    const post = blogStorageService.getPostById(id);
+    if (!post) return null;
+    
+    // Check if this post has been viewed in this session
+    const sessionKey = `post_viewed_${id}`;
+    const hasViewed = sessionStorage.getItem(sessionKey);
+    
+    if (!hasViewed) {
+      // Mark as viewed in this session
+      sessionStorage.setItem(sessionKey, 'true');
+      // Increment the view count
+      return blogStorageService.updatePost(id, { views: post.views + 1 });
+    }
+    
+    return post;
+  },
 };
 
 // Category Service
@@ -423,6 +458,8 @@ const addNutritionBlogPost = () => {
       featured_image: "https://picsum.photos/seed/nutrition/800/400.jpg",
       category: '3',
       read_time: "6 min",
+      likes: 35,
+      views: 124,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };

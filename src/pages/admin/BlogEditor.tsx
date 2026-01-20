@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Save, ArrowLeft, Eye, Trash2, Info } from 'lucide-react';
+import { Save, ArrowLeft, Eye, Trash2, Info, CheckCircle } from 'lucide-react';
 import BlogEditor from '../../components/admin/BlogEditor';
 import { blogStorageService, categoryStorageService } from '../../lib/blogStorage';
 import type { BlogPost, BlogCategory } from '../../lib/supabase';
@@ -29,6 +29,7 @@ const AdminBlogEditor: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [showSavePopup, setShowSavePopup] = useState(false);
 
   useEffect(() => {
     // Load categories
@@ -79,29 +80,28 @@ const AdminBlogEditor: React.FC = () => {
   };
 
   const handleSave = async (publish: boolean = false) => {
-    if (!post.title || !post.content) {
-      alert('Please fill in the title and content');
-      return;
-    }
-
     setIsSaving(true);
     try {
-      const postData = {
+      const postToSave = {
         ...post,
         published: publish,
-        read_time: post.read_time || calculateReadTime(post.content)
+        updated_at: new Date().toISOString(),
       } as BlogPost;
 
-      if (isEditing && post.id) {
-        blogStorageService.updatePost(post.id, postData);
+      if (isEditing && slug) {
+        blogStorageService.updatePost(slug, postToSave);
       } else {
-        blogStorageService.createPost(postData);
+        blogStorageService.createPost(postToSave);
       }
 
-      navigate('/admin/dashboard');
+      setShowSavePopup(true);
+      setTimeout(() => setShowSavePopup(false), 3000);
+      
+      if (publish) {
+        setTimeout(() => navigate('/admin/dashboard'), 1000);
+      }
     } catch (error) {
       console.error('Error saving post:', error);
-      alert('Error saving post');
     } finally {
       setIsSaving(false);
     }
@@ -229,19 +229,25 @@ const AdminBlogEditor: React.FC = () => {
               <button
                 onClick={() => handleSave(false)}
                 disabled={isSaving}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
               >
                 <Save size={20} />
-                {isSaving ? 'Saving...' : 'Save Draft'}
+                {isSaving ? 'Saving...' : 'Save Changes'}
               </button>
               
               <button
                 onClick={() => handleSave(true)}
                 disabled={isSaving}
-                className="flex items-center gap-2 px-4 py-2 bg-grounded-600 text-white rounded hover:bg-grounded-700 disabled:opacity-50"
+                className={`flex items-center gap-2 px-4 py-2 rounded disabled:opacity-50 ${
+                  post.published 
+                    ? 'bg-orange-600 text-white hover:bg-orange-700' 
+                    : 'bg-green-600 text-white hover:bg-green-700'
+                }`}
               >
                 <Save size={20} />
-                {isSaving ? 'Publishing...' : 'Publish'}
+                {isSaving ? 'Publishing...' : (
+                  post.published ? 'Update Published' : 'Publish'
+                )}
               </button>
             </div>
           </div>
@@ -393,9 +399,20 @@ const AdminBlogEditor: React.FC = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Meta Description
-                    <span className="ml-2 text-xs text-gray-500 cursor-help" title="This appears in search engine results and social media previews. Keep it under 160 characters for best results.">
-                      <Info size={12} className="inline" />
-                    </span>
+                    <div className="inline-block ml-2">
+                      <div className="group relative inline-block">
+                        <Info size={12} className="text-gray-400 cursor-help" />
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-10 w-64 p-3 bg-gray-800 text-white text-xs rounded-lg shadow-lg">
+                          <div className="font-semibold mb-1">Why Meta Description Matters:</div>
+                          <ul className="space-y-1">
+                            <li>• Appears in Google search results</li>
+                            <li>• Shows on social media when shared</li>
+                            <li>• Helps with SEO ranking</li>
+                            <li>• Keep under 160 characters</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
                   </label>
                   <textarea
                     value={post.meta_description}
@@ -408,9 +425,21 @@ const AdminBlogEditor: React.FC = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Meta Keywords
-                    <span className="ml-2 text-xs text-gray-500 cursor-help" title="Comma-separated keywords that help search engines understand your content. Include 5-10 relevant keywords.">
-                      <Info size={12} className="inline" />
-                    </span>
+                    <div className="inline-block ml-2">
+                      <div className="group relative inline-block">
+                        <Info size={12} className="text-gray-400 cursor-help" />
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-10 w-64 p-3 bg-gray-800 text-white text-xs rounded-lg shadow-lg">
+                          <div className="font-semibold mb-1">Why Meta Keywords Help:</div>
+                          <ul className="space-y-1">
+                            <li>• Tell search engines what your post is about</li>
+                            <li>• Help with ranking for specific terms</li>
+                            <li>• Use 5-10 relevant keywords</li>
+                            <li>• Separate with commas</li>
+                            <li>• Include terms people actually search for</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
                   </label>
                   <input
                     type="text"
@@ -425,6 +454,48 @@ const AdminBlogEditor: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Save Confirmation Popup */}
+      {showSavePopup && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.9 }}
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={() => setShowSavePopup(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.9 }}
+            animate={{ scale: 1 }}
+            className="bg-white rounded-lg p-6 max-w-md mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Changes Saved</h3>
+                <p className="text-sm text-gray-600">
+                  {post.published 
+                    ? 'Your post has been updated and is live on the site.' 
+                    : 'Your draft has been saved successfully.'
+                  }
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowSavePopup(false)}
+                className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+              >
+                Close
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
     </div>
   );
 };

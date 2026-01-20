@@ -7,8 +7,49 @@ import ContentCard from '../components/public/ContentCard';
 import Footer from '../components/public/Footer';
 import IconSprinkles from '../components/public/IconSprinkles';
 import FloatingButtons from '../components/public/FloatingButtons';
+import { blogStorageService, categoryStorageService } from '../lib/blogStorage';
+import type { BlogPost, BlogCategory } from '../lib/supabase';
 
 const Home = () => {
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
+  const [categoriesData, setCategoriesData] = useState<BlogCategory[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadBlogData = async () => {
+      try {
+        // Load posts from JSON storage
+        const posts = blogStorageService.getPublishedPosts();
+        setBlogPosts(posts);
+
+        // Load categories for color mapping
+        const allCategories = categoryStorageService.getCategories();
+        setCategoriesData(allCategories);
+      } catch (error) {
+        console.error('Error loading blog data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadBlogData();
+  }, []);
+
+  // Helper functions to get category colors and names
+  const getCategoryColors = (category: string): { color: string; bgColor: string; name: string } => {
+    const cat = categoriesData.find(c => c.id === category);
+    return {
+      color: cat?.color || 'text-grounded-800',
+      bgColor: cat?.bgColor || 'bg-grounded-100',
+      name: cat?.name || category
+    };
+  };
+
+  const getCategoryName = (category: string): string => {
+    const cat = categoriesData.find(c => c.id === category);
+    return cat?.name || category;
+  };
+
   const services = [
     {
       title: 'Personal Training',
@@ -24,7 +65,7 @@ const Home = () => {
       href: '/virtual-trainer',
       category: 'Online',
       cardStyle: 'earth' as const,
-      icon: 'monitor' as const  // Changed from 'heart' to 'monitor'
+      icon: 'heart' as const  // Changed from 'monitor' to 'heart'
     },
     {
       title: 'Grounded Nutrition',
@@ -36,7 +77,7 @@ const Home = () => {
     }
   ];
 
-  const blogPosts = [
+  const blogPostsOld = [
     {
       title: 'Survival is Possible with a Strong Mind and Strong Body',
       description: 'Read on my blog, how my positivity in life was put to the test when I became a statistic of Breast Cancer.',
@@ -323,8 +364,8 @@ const Home = () => {
                   exit={{ opacity: 0, x: -300 }}
                   transition={{ duration: 0.5 }}
                   className={`p-8 md:p-12 rounded-2xl shadow-xl ${currentTestimonial % 3 === 0 ? 'bg-gradient-to-br from-grounded-50 to-grounded-100' :
-                      currentTestimonial % 3 === 1 ? 'bg-gradient-to-br from-earth-50 to-earth-100' :
-                        'bg-white border-2 border-neutral-200'
+                    currentTestimonial % 3 === 1 ? 'bg-gradient-to-br from-earth-50 to-earth-100' :
+                      'bg-white border-2 border-neutral-200'
                     } ${expandedTestimonial === currentTestimonial ? 'md:col-span-3' : ''}`}
                 >
                   <div className="max-w-3xl mx-auto">
@@ -381,8 +422,8 @@ const Home = () => {
                     key={index}
                     onClick={() => goToTestimonial(index)}
                     className={`w-2 h-2 md:w-3 md:h-3 rounded-full transition-all duration-200 ${index === currentTestimonial
-                        ? 'bg-grounded-500 w-8 md:w-12'
-                        : 'bg-neutral-300 hover:bg-neutral-400'
+                      ? 'bg-grounded-500 w-8 md:w-12'
+                      : 'bg-neutral-300 hover:bg-neutral-400'
                       }`}
                     aria-label={`Go to testimonial ${index + 1}`}
                   />
@@ -423,24 +464,25 @@ const Home = () => {
           </motion.div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 mb-12">
-            {blogPosts.map((post, index) => (
+            {blogPosts.slice(0, 3).map((post, index) => (
               <motion.div
-                key={post.title}
+                key={post.id}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
               >
                 <ContentCard
                   title={post.title}
-                  description={post.description}
-                  href={post.href}
+                  href={`/blog/${post.slug}`}
                   variant="blog"
-                  category={post.category}
-                  date={post.date}
+                  category={getCategoryName(post.category)}
+                  categoryColor={getCategoryColors(post.category).color}
+                  categoryBgColor={getCategoryColors(post.category).bgColor}
                   author={post.author}
-                  readTime={post.readTime}
-                  cardStyle={post.cardStyle}
-                />
+                  readTime={post.read_time}
+                  likes={post.likes}
+                  views={post.views}
+                  cardStyle="white" description={''} />
               </motion.div>
             ))}
           </div>

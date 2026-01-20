@@ -11,8 +11,10 @@ interface ContentCardProps {
   date?: string;
   author?: string;
   readTime?: string;
+  likes?: number;
+  views?: number;
   href: string;
-  variant?: 'service' | 'blog' | 'default';
+  variant?: 'service' | 'blog' | 'default' | 'event';
   cardStyle?: 'white' | 'green' | 'earth' | 'gradient';
   icon?: 'leaf' | 'dumbbell' | 'heart' | 'monitor' | 'none';
 }
@@ -27,6 +29,8 @@ const ContentCard = ({
   date, 
   author, 
   readTime, 
+  likes,
+  views,
   href, 
   variant = 'default',
   cardStyle = 'white',
@@ -35,6 +39,7 @@ const ContentCard = ({
   const cardVariants = {
     service: 'hover:shadow-2xl hover:-translate-y-2',
     blog: 'hover:shadow-2xl hover:-translate-y-1',
+    event: 'hover:shadow-2xl hover:-translate-y-1',
     default: 'hover:shadow-xl'
   };
 
@@ -117,7 +122,7 @@ const ContentCard = ({
         )}
         
         {/* Blog Meta */}
-        {variant === 'blog' && (date || author || readTime) && (
+        {variant === 'blog' && (date || author || readTime || likes !== undefined || views !== undefined) && (
           <div className="flex flex-wrap gap-4 text-sm mb-4">
             {date && (
               <div className={`flex items-center space-x-1 ${getTextColor()}`}>
@@ -135,6 +140,18 @@ const ContentCard = ({
               <div className={`flex items-center space-x-1 ${getTextColor()}`}>
                 <Clock size={14} />
                 <span>{readTime}</span>
+              </div>
+            )}
+            {likes !== undefined && (
+              <div className={`flex items-center space-x-1 ${getTextColor()}`}>
+                <Heart size={14} />
+                <span>{likes}</span>
+              </div>
+            )}
+            {views !== undefined && (
+              <div className={`flex items-center space-x-1 ${getTextColor()}`}>
+                <Monitor size={14} />
+                <span>{views} views</span>
               </div>
             )}
           </div>

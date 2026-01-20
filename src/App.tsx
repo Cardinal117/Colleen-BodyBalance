@@ -10,11 +10,22 @@ import VirtualTrainer from './pages/VirtualTrainer';
 import AdminLogin from './pages/admin/Login';
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminBlogEditor from './pages/admin/BlogEditor';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import CookieConsent from './components/public/CookieConsent';
 
 function App() {
+  const handleCookieAccept = () => {
+    console.log('Cookies accepted');
+  };
+
+  const handleCookieDecline = () => {
+    console.log('Cookies declined');
+  };
+
   return (
     <Router>
       <div className="App">
+        <CookieConsent onAccept={handleCookieAccept} onDecline={handleCookieDecline} />
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
@@ -30,6 +41,9 @@ function App() {
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/editor" element={<AdminBlogEditor />} />
           <Route path="/admin/editor/:slug" element={<AdminBlogEditor />} />
+          
+          {/* Privacy Policy Route */}
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           
           {/* Additional routes will be added here */}
         </Routes>

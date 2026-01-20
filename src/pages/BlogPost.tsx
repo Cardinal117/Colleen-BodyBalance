@@ -11,27 +11,51 @@ import {
   Twitter, 
   Linkedin,
   Heart,
+  Eye,
   Mail
 } from 'lucide-react';
-import { blogStorageService } from '../lib/blogStorage';
-import type { BlogPost } from '../lib/supabase';
+import { blogStorageService, categoryStorageService } from '../lib/blogStorage';
+import type { BlogPost, BlogCategory, BlogComment } from '../lib/supabase';
 import Navbar from '../components/public/Navbar';
 import Footer from '../components/public/Footer';
 import IconSprinkles from '../components/public/IconSprinkles';
+import Comments from '../components/public/Comments';
+import commentStorageService from '../lib/commentStorage';
 
 const BlogPostPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const [post, setPost] = useState<BlogPost | null>(null);
+  const [categories, setCategories] = useState<BlogCategory[]>([]);
+  const [comments, setComments] = useState<BlogComment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Helper function to get category name and colors
+  const getCategoryInfo = (categoryId: string) => {
+    const category = categories.find(cat => cat.id === categoryId);
+    return {
+      name: category?.name || 'Uncategorized',
+      color: category?.color || 'text-grounded-800',
+      bgColor: category?.bgColor || 'bg-grounded-100'
+    };
+  };
 
   useEffect(() => {
     const loadPost = async () => {
       try {
+        // Load categories first
+        const allCategories = categoryStorageService.getCategories();
+        setCategories(allCategories);
+        
         // Load post from JSON storage
         const foundPost = blogStorageService.getPostBySlug(slug || '');
         if (foundPost) {
           setPost(foundPost);
+          // Increment view count
+          blogStorageService.incrementViews(foundPost.id);
+          // Load comments for this post
+          const postComments = commentStorageService.getComments(foundPost.id);
+          setComments(postComments);
         } else {
           setError('Post not found');
         }
@@ -47,6 +71,27 @@ const BlogPostPage = () => {
       loadPost();
     }
   }, [slug]);
+
+  const handleAddComment = async (commentData: { author: string; email: string; content: string }) => {
+    if (!post) return;
+    
+    try {
+      const newComment = commentStorageService.addComment(post.id, commentData);
+      setComments(prev => [...prev, newComment]);
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      throw error;
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    try {
+      commentStorageService.deleteComment(commentId);
+      setComments(prev => prev.filter(comment => comment.id !== commentId));
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+    }
+  };
 
   const sharePost = (platform: string) => {
     const url = window.location.href;
@@ -121,8 +166,8 @@ const BlogPostPage = () => {
 
             {/* Post Header */}
             <div className="text-center mb-12">
-              <div className="inline-flex items-center space-x-2 bg-grounded-100 text-grounded-700 px-4 py-2 rounded-full mb-6">
-                <span className="text-sm font-medium">{post.category}</span>
+              <div className={`inline-flex items-center space-x-2 px-4 py-2 rounded-full mb-6 ${getCategoryInfo(post.category).bgColor} ${getCategoryInfo(post.category).color}`}>
+                <span className="text-sm font-medium">{getCategoryInfo(post.category).name}</span>
               </div>
               
               <h1 className="font-heading text-4xl md:text-5xl font-bold text-neutral-900 mb-6">
@@ -199,10 +244,59 @@ const BlogPostPage = () => {
                 to="/blog"
                 className="inline-flex items-center space-x-2 text-grounded-600 hover:text-grounded-700 font-medium transition-colors"
               >
-                <ArrowLeft size={20} />
+                <ArrowLeft size={16} />
                 <span>Back to Blog</span>
               </Link>
             </div>
+
+            {/* Like and View Counts */}
+            <div className="mt-12 pt-8 border-t border-neutral-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-6">
+                  <button
+                    onClick={() => {
+                      if (post) {
+                        blogStorageService.likePost(post.id);
+                        // Update the post state to reflect the new like count
+                        window.location.reload();
+                      }
+                    }}
+                    className="flex items-center space-x-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                  >
+                    <Heart size={18} />
+                    <span className="font-medium">{post?.likes || 0}</span>
+                  </button>
+                  
+                  <div className="flex items-center space-x-2 text-neutral-600">
+                    <Eye size={18} />
+                    <span className="font-medium">{post?.views || 0} views</span>
+                  </div>
+                </div>
+                
+                <div className="text-sm text-neutral-500">
+                  {post?.read_time}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Comments Section */}
+      <section className="py-20 bg-gradient-to-br from-neutral-50 to-grounded-50">
+        <div className="container">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+          >
+            <Comments
+              postId={post.id}
+              comments={comments}
+              onAddComment={handleAddComment}
+              onDeleteComment={handleDeleteComment}
+              isAdmin={false}
+            />
           </motion.div>
         </div>
       </section>

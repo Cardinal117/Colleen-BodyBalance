@@ -7,6 +7,16 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-anon-key
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Types for our database tables
+export interface BlogComment {
+  id: string;
+  post_id: string;
+  author: string;
+  email: string;
+  content: string;
+  likes: number;
+  created_at: string;
+}
+
 export interface BlogPost {
   id: string;
   title: string;
@@ -17,11 +27,13 @@ export interface BlogPost {
   category: string;
   published: boolean;
   read_time: string;
+  likes: number;
+  views: number;
   featured_image?: string;
   meta_description?: string;
   meta_keywords?: string;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
 }
 
 export interface BlogCategory {
