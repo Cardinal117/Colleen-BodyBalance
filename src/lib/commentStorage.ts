@@ -4,6 +4,7 @@ const COMMENTS_KEY = 'bodybalance_blog_comments';
 
 export interface CommentStorageService {
   getComments: (postId: string) => BlogComment[];
+  getCommentsByPostId: (postId: string) => BlogComment[];
   addComment: (postId: string, commentData: Omit<BlogComment, 'id' | 'created_at' | 'post_id' | 'likes'>) => BlogComment;
   deleteComment: (commentId: string) => void;
   likeComment: (commentId: string) => BlogComment | null;
@@ -11,6 +12,16 @@ export interface CommentStorageService {
 
 const commentStorageService: CommentStorageService = {
   getComments: (postId: string): BlogComment[] => {
+    if (typeof window === 'undefined') return [];
+    
+    const comments = localStorage.getItem(COMMENTS_KEY);
+    if (!comments) return [];
+    
+    const allComments = JSON.parse(comments) as BlogComment[];
+    return allComments.filter(comment => comment.post_id === postId);
+  },
+
+  getCommentsByPostId: (postId: string): BlogComment[] => {
     if (typeof window === 'undefined') return [];
     
     const comments = localStorage.getItem(COMMENTS_KEY);

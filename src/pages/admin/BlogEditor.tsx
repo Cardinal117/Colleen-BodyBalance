@@ -71,6 +71,7 @@ const AdminBlogEditor: React.FC = () => {
   };
 
   const handleContentChange = (content: string) => {
+    console.log('Content changed in admin editor:', content); // Debug log
     const readTime = calculateReadTime(content);
     setPost(prev => ({
       ...prev,
@@ -88,10 +89,15 @@ const AdminBlogEditor: React.FC = () => {
         updated_at: new Date().toISOString(),
       } as BlogPost;
 
+      console.log('Saving post:', postToSave); // Debug log
+      console.log('Post content being saved:', postToSave.content); // Debug log
+
       if (isEditing && slug) {
         blogStorageService.updatePost(slug, postToSave);
+        console.log('Post updated');
       } else {
         blogStorageService.createPost(postToSave);
+        console.log('Post created');
       }
 
       setShowSavePopup(true);
@@ -181,7 +187,7 @@ const AdminBlogEditor: React.FC = () => {
           </header>
           
           <div 
-            className="prose prose-lg max-w-none"
+            className="prose prose-lg max-w-none prose-headings:text-neutral-900 prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl prose-p:text-neutral-700 prose-strong:text-neutral-900 prose-em:text-neutral-700 prose-code:text-neutral-900 prose-pre:bg-neutral-100 prose-blockquote:border-l-4 prose-blockquote:border-grounded-500 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-neutral-600 prose-ul:list-disc prose-ol:list-decimal prose-li:my-2 prose-a:text-grounded-600 prose-a:no-underline hover:prose-a:underline prose-img:rounded-lg prose-img:shadow-lg prose-hr:border-neutral-200 prose-table:border prose-table:border-neutral-300 prose-th:bg-neutral-50 prose-th:border prose-th:border-neutral-300 prose-th:px-4 prose-th:py-2 prose-td:border prose-td:border-neutral-300 prose-td:px-4 prose-td:py-2 [&_*]:font-inherit [&_*]:text-inherit"
             dangerouslySetInnerHTML={{ __html: post.content || '' }}
           />
         </article>

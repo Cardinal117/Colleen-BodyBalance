@@ -48,20 +48,26 @@ const BlogPostPage = () => {
         setCategories(allCategories);
         
         // Load post from JSON storage
-        const foundPost = blogStorageService.getPostBySlug(slug || '');
-        if (foundPost) {
-          setPost(foundPost);
+        const postData = blogStorageService.getPostBySlug(slug!);
+        console.log('BlogPost: Loading post data:', postData); // Debug log
+        console.log('BlogPost: Post content:', postData?.content); // Debug log
+        
+        if (postData) {
+          setPost(postData);
+          console.log('BlogPost: Post loaded successfully, content length:', postData.content.length); // Debug log
+          
           // Increment view count
-          blogStorageService.incrementViews(foundPost.id);
-          // Load comments for this post
-          const postComments = commentStorageService.getComments(foundPost.id);
+          blogStorageService.incrementViews(postData.id);
+          
+          // Load comments
+          const postComments = commentStorageService.getCommentsByPostId(postData.id);
           setComments(postComments);
         } else {
           setError('Post not found');
         }
       } catch (error) {
-        setError('Error loading post');
-        console.error('Error loading blog post:', error);
+        console.error('Error loading post:', error);
+        setError('Failed to load post');
       } finally {
         setIsLoading(false);
       }
@@ -234,7 +240,7 @@ const BlogPostPage = () => {
             className="max-w-4xl mx-auto"
           >
             <div 
-              className="prose prose-lg max-w-none"
+              className="prose prose-lg max-w-none prose-headings:text-neutral-900 prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl prose-p:text-neutral-700 prose-strong:text-neutral-900 prose-em:text-neutral-700 prose-code:text-neutral-900 prose-pre:bg-neutral-100 prose-blockquote:border-l-4 prose-blockquote:border-grounded-500 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-neutral-600 prose-ul:list-disc prose-ol:list-decimal prose-li:my-2 prose-a:text-grounded-600 prose-a:no-underline hover:prose-a:underline prose-img:rounded-lg prose-img:shadow-lg prose-hr:border-neutral-200 prose-table:border prose-table:border-neutral-300 prose-th:bg-neutral-50 prose-th:border prose-th:border-neutral-300 prose-th:px-4 prose-th:py-2 prose-td:border prose-td:border-neutral-300 prose-td:px-4 prose-td:py-2"
               dangerouslySetInnerHTML={{ __html: post.content }}
             />
 

@@ -280,7 +280,9 @@ export const blogStorageService = {
       ...updates,
       updated_at: new Date().toISOString()
     };
+    console.log('Storage: Saving post with content:', posts[index].content); // Debug log
     localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
+    console.log('Storage: Posts saved to localStorage:', JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')); // Debug log
     return posts[index];
   },
 
